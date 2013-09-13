@@ -1,0 +1,16 @@
+#!/bin/sh
+
+# This is a shell script.  I did not mark it executable because
+# it is only for Debian/Ubuntu.  I would like to make this file
+# a resource for help installing the ncurses php extension.
+
+# If you have improvements, feel free to submit them.
+
+apt-get install php-pear
+apt-get install php5-dev
+apt-get install ncurses-dev
+apt-get install libncursesw5-dev
+pecl install ncurses
+
+# Additional, I had to personally:
+echo 'extension=ncurses.so' > /etc/php5/cli/conf.d/999_ncurses.ini
