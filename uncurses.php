@@ -54,8 +54,14 @@
 		// SS true,false (int $ascii) 
 		// DD Adds a character, specified as the integer //$ascii//, to the current cursor position, and advances the cursor.  If the cursor reaches the end of the row, it will wrap around to the next row.  Some non-printing control characters have special meaning, see [[addstr()]] for those meanings.
 		// RR Returns TRUE on success or FALSE on failure.
-		public function addch($ascii) {
-			if(ncurses_addch($ascii) === 0) { 
+		public function addch($ascii, $y = false, $x = false) {
+			if($y === false || $x === false) { 
+				$return_value = ncurses_addch($ascii);
+			} else { 
+				$return_value = ncurses_mvaddch($ascii, $y, $x);
+			}				
+			
+			if($return_value === 0) { 
 				return true;
 			} else { 
 				return false;
@@ -65,8 +71,14 @@
 		// int ncurses_addchstr (string $s) - Add attributed string at current position
 		// DD I couldn't get this function to do anything.  See the ncurses man pages.  If anyone has a working example of this function, I would like to see it.
 		// RR Returns TRUE on success or FALSE on failure.
-		public function addchstr($s) {
-			if(ncurses_addchstr($s) === 0) { 
+		public function addchstr($s, $y = false, $x = false) {
+			if($y === false || $x === false) { 
+				$return_value = ncurses_addchstr($s);
+			} else { 
+				$return_value = ncurses_mvaddchstr($s, $y, $x);
+			}
+			
+			if($return_value === 0) { 
 				return true;
 			} else { 
 				return false;
@@ -80,8 +92,14 @@
 		// DD * A newline clears the rest of the row to the right edge of the screen, and then moving the cursor to the first column of the next line
 		// DD * Any other non-printing control characters will be printed in //^X// notation.
 		// RR Returns TRUE on success or FALSE on failure.		
-		public function addstr($text) {
-			if(ncurses_addstr($text) === 0) { 
+		public function addstr($text, $y = false, $x = false) {
+			if($y === false || $x === false) { 
+				$return_value = ncurses_addstr($text);
+			} else { 
+				$return_value = ncurses_mvaddstr($text, $y, $x);
+			}
+			
+			if($return_value === 0) { 
 				return true;
 			} else { 
 				return false;
@@ -515,31 +533,6 @@
 			return ncurses_move($y, $x);
 		}
 
-		// int ncurses_mvaddch (int $y , int $x , int $c) - Move current position and add character
-		public function mvaddch($y, $x, $c) {
-			return ncurses_mvaddch($y, $x, $c);
-		}
-
-		// int ncurses_mvaddchnstr (int $y , int $x , string $s , int $n) - Move position and add attributed string with specified length
-		public function mvaddchnstr($y, $x, $s, $n) {
-			return ncurses_mvaddchnstr($y, $x, $s, $n);
-		}
-
-		// int ncurses_mvaddchstr (int $y , int $x , string $s) - Move position and add attributed string
-		public function mvaddchstr($y, $x, $s) {
-			return ncurses_mvaddchstr($y, $x, $s);
-		}
-
-		// int ncurses_mvaddnstr (int $y , int $x , string $s , int $n) - Move position and add string with specified length
-		public function mvaddnstr($y, $x, $s, $n) {
-			return ncurses_mvaddnstr($y, $x, $s, $n);
-		}
-
-		// int ncurses_mvaddstr (int $y , int $x , string $s) - Move position and add string
-		public function mvaddstr($y, $x, $s) {
-			return ncurses_mvaddstr($y, $x, $s);
-		}
-
 		// int ncurses_mvcur (int $old_y , int $old_x , int $new_y , int $new_x) - Move cursor immediately
 		public function mvcur($old_y, $old_x, $new_y, $new_x) {
 			return ncurses_mvcur($old_y, $old_x, $new_y, $new_x);
@@ -934,7 +927,7 @@
 		}
 
 		// bool ncurses_wmouse_trafo (resource $window , int &$y , int &$x , bool $toscreen) - Transforms window/stdscr coordinates
-		// See notes on ->mouse_trafo()
+		// DD See notes on uncurses::mouse_trafo()
 		public function wmouse_trafo($window, $y, $x, $toscreen) {
 			$return_value = ncurses_wmouse_trafo($window, $y, $x, $toscreen);
 			return array(
@@ -974,3 +967,5 @@
 			return ncurses_wvline($window, $charattr, $n);
 		}
 	}
+
+	// EOF
