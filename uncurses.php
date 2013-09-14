@@ -1,43 +1,43 @@
 <?php
  /*
-  * uncurses, The usable 'ncurses for php' interface
-  *
-  * Copyright (c) 2013, Armond B. Carroll III, ben@hl9.net
-  * This file is a part of the uncurses library.
-  *
-  * Redistribution and use in source and binary forms, with or without
-  * modification, are permitted provided that the following conditions are met:
-  *
-  * 1. Redistributions of source code must retain the above copyright notice,
-  *    this list of conditions and the following disclaimer.
-  *
-  * 2. Redistributions in binary form must reproduce the above copyright
-  *    notice, this list of conditions and the following disclaimer in the
-  *    documentation and/or other materials provided with the distribution.
-  *
-  * 3. No one other than the copyright holder, listed above, has the right to
-  *    modify the terms applicable to covered code created under this License.
-  *
-  * THIS SOFTWARE IS PROVIDED BY THE AUTHOR AND CONTRIBUTORS ``AS IS'' AND ANY
-  * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
-  * WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
-  * DISCLAIMED. IN NO EVENT SHALL THE AUTHOR OR CONTRIBUTORS BE LIABLE FOR ANY
-  * DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
-  * (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
-  * SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
-  * CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
-  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
-  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH
-  * DAMAGE.
-  *
-  * This file includes textual descriptions and prototype names, many verbatim
-  * from the PHP Manual, which are (c) The PHP Documentation Group, and covered
-  * under the Creative Commons Attribution 3.0 License.  The author claims no
-  * ownership of such material, and also extends a huge thanks the PHP
-  * Documentation Group for their work.
-  */
+	* uncurses, The usable 'ncurses for php' interface
+	*
+	* Copyright (c) 2013, Armond B. Carroll III, ben@hl9.net
+	* This file is a part of the uncurses library.
+	*
+	* Redistribution and use in source and binary forms, with or without
+	* modification, are permitted provided that the following conditions are met:
+	*
+	* 1. Redistributions of source code must retain the above copyright notice,
+	*    this list of conditions and the following disclaimer.
+	*
+	* 2. Redistributions in binary form must reproduce the above copyright
+	*    notice, this list of conditions and the following disclaimer in the
+	*    documentation and/or other materials provided with the distribution.
+	*
+	* 3. No one other than the copyright holder, listed above, has the right to
+	*    modify the terms applicable to covered code created under this License.
+	*
+	* THIS SOFTWARE IS PROVIDED BY THE AUTHOR AND CONTRIBUTORS ``AS IS'' AND ANY
+	* EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+	* WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+	* DISCLAIMED. IN NO EVENT SHALL THE AUTHOR OR CONTRIBUTORS BE LIABLE FOR ANY
+	* DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
+	* (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+	* SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+	* CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
+	* LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
+	* OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH
+	* DAMAGE.
+	*
+	* This file includes textual descriptions and prototype names, many verbatim
+	* from the PHP Manual, which are (c) The PHP Documentation Group, and covered
+	* under the Creative Commons Attribution 3.0 License.  The author claims no
+	* ownership of such material, and also extends a huge thanks the PHP
+	* Documentation Group for their work.
+	*/
 
-	//namespace OOcurses;
+	//namespace ucurses;
 
 	class uncurses {
 		public function __construct($init = true) {
@@ -51,51 +51,88 @@
 		}
 
 		// int ncurses_addch (int $ch) - Add character at current position and advance cursor
-		public function addch($ch) {
-			return ncurses_addch($ch);
-		}
-
-		// int ncurses_addchnstr (string $s , int $n) - Add attributed string with specified length at current position
-		public function addchnstr($s, $n) {
-			return ncurses_addchnstr($s, $n);
+		// SS true,false (int $ascii) 
+		// DD Adds a character, specified as the integer //$ascii//, to the current cursor position, and advances the cursor.  If the cursor reaches the end of the row, it will wrap around to the next row.  Some non-printing control characters have special meaning, see [[addstr()]] for those meanings.
+		// RR Returns TRUE on success or FALSE on failure.
+		public function addch($ascii) {
+			if(ncurses_addch($ascii) === 0) { 
+				return true;
+			} else { 
+				return false;
+			}
 		}
 
 		// int ncurses_addchstr (string $s) - Add attributed string at current position
+		// DD I couldn't get this function to do anything.  See the ncurses man pages.  If anyone has a working example of this function, I would like to see it.
+		// RR Returns TRUE on success or FALSE on failure.
 		public function addchstr($s) {
-			return ncurses_addchstr($s);
-		}
-
-		// int ncurses_addnstr (string $s , int $n) - Add string with specified length at current position
-		public function addnstr($s, $n) {
-			return ncurses_addnstr($s, $n);
+			if(ncurses_addchstr($s) === 0) { 
+				return true;
+			} else { 
+				return false;
+			}
 		}
 
 		// int ncurses_addstr (string $text) - Output text at current position
+		// SS true,fale (string $text)
+		// DD Outputs a string specified by //$text// at the current cursor position, and advances the cursor.  If the cursor reaches the end of the row, it will wrap around to the next row.   Some non-printing control characters have special meaning: 
+		// DD * A backspace moves the cursor one column left, if it as the left edge of the screen already, it does nothing
+		// DD * A newline clears the rest of the row to the right edge of the screen, and then moving the cursor to the first column of the next line
+		// DD * Any other non-printing control characters will be printed in //^X// notation.
+		// RR Returns TRUE on success or FALSE on failure.		
 		public function addstr($text) {
-			return ncurses_addstr($text);
+			if(ncurses_addstr($text) === 0) { 
+				return true;
+			} else { 
+				return false;
+			}
 		}
 
-		// int ncurses_assume_default_colors (int $fg , int $bg) - Define default colors for color 0
+		// int ncurses_assume_default_colors (int $fg , int $bg) - Define default colors for color
+		// SS true,false (int $fg_pair, int $bg_pair)
+		// DD Specify what background and foreground colors to use for color pair `0`.  You may also specify the special paramters `-1, -1` which signifies to reset to default terminal colors, and is also exactly equivilant to `uncurses::use_default_colors()``.  According to default_colors (3X), "This function will fail if either the terminal does not support the orig_pair or orig_colors capability. If the initialize_pair capability is found, this causes an error as well. "
+		// RR Returns TRUE on success or FALSE on failure.
 		public function assume_default_colors($fg, $bg) {
-			return ncurses_assume_default_colors($fg, $bg);
+			if(ncurses_assume_default_colors($fg, $bg) === 0) { 
+				return true;
+			} else { 
+				return false;
+			}
 		}
 
 		// int ncurses_attroff (int $attributes) - Turn off the given attributes
+		// RR Returns TRUE on success or FALSE on failure.
 		public function attroff($attributes) {
-			return ncurses_attroff($attributes);
+			if(ncurses_attroff($attributes) === 0) { 
+				return true;
+			} else { 
+				return false;
+			}
 		}
 
 		// int ncurses_attron (int $attributes) - Turn on the given attributes
+		// RR Returns TRUE on success or FALSE on failure.
 		public function attron($attributes) {
-			return ncurses_attron($attributes);
+			if(ncurses_attron($attributes) === 0) { 
+				return true;
+			} else { 
+				return false;
+			}
 		}
 
 		// int ncurses_attrset (int $attributes) - Set given attributes
+		// RR Returns TRUE on success or FALSE on failure.
 		public function attrset($attributes) {
-			return ncurses_attrset($attributes);
+			if(ncurses_attrset($attributes) === 0) {
+				return true;
+			} else { 
+				return false;
+			}
 		}
 
 		// int ncurses_baudrate (void) - Returns baudrate of terminal
+		// SS int (void)
+		// RR Returns the current baud rate of the terminal as an integer.  For example, __38400__.
 		public function baudrate() {
 			return ncurses_baudrate();
 		}
@@ -106,13 +143,23 @@
 		}
 
 		// int ncurses_bkgd (int $attrchar) - Set background property for terminal screen
+		// RR bkgd() will seemingly always return `true`, unless ncurses hasn't been initialized.
 		public function bkgd($attrchar) {
-			return ncurses_bkgd($attrchar);
+			if(ncurses_bkgd($attrchar) === 0) { 
+				return true;
+			} else { 
+				return false;
+			}
 		}
 
 		// void ncurses_bkgdset (int $attrchar) - Control screen background
+		// RR bkgd() will seemingly always return `true`, unless ncurses hasn't been initialized.
 		public function bkgdset($attrchar) {
-			return ncurses_bkgdset($attrchar);
+			if(ncurses_bkgdset($attrchar) === 0) { 
+				return true;
+			} else { 
+				return false;
+			}
 		}
 
 		// int ncurses_border (int $left , int $right , int $top , int $bottom , int $tl_corner , int $tr_corner , int $bl_corner , int $br_corner) - Draw a border around the screen using attributed characters
@@ -229,11 +276,6 @@
 			return ncurses_echo();
 		}
 
-		// int ncurses_echochar (int $character) - Single character output including refresh
-		public function echochar($character) {
-			return ncurses_echochar($character);
-		}
-
 		// int ncurses_end (void) - Stop using ncurses, clean up the screen
 		public function end() {
 			return ncurses_end();
@@ -270,41 +312,42 @@
 		}
 
 		// void ncurses_getmaxyx (resource $window , int &$y , int &$x) - Returns the size of a window
-		public function getmaxyx($window) {
+		public function getmaxyx($window = STDSCR) {
 			ncurses_getmaxyx($window, $y, $x);
 			return array(
+				0 => true,
 				'y' => $y,
 				'x' => $x
 			);
 		}
 
 		// New function
-		public function getmaxx($window) {
+		public function getmaxx($window = STDSCR) {
 			$value = $this->getmaxyx($window);
 			return $value['x'];
 		}
 
 		// New function
-		public function getmaxy($window) {
+		public function getmaxy($window = STDSCR) {
 			$value = $this->getmaxyx($window);
 			return $value['y'];
 		}
 
 		// bool ncurses_getmouse (array &$mevent) - Reads mouse event
-		// Return values are reversed (true is error, false is OK)
 		public function getmouse() {
-			$return_value = ncurses_getmouse($mevent);
-			if($return_value) {
-				return false;
+			if(ncurses_getmouse($mevent) === false) { 
+				array_unshift($mevent, true);
+				return $mevent;
 			} else {
-				return $return_value;
-			}
+				return false;
+			} 
 		}
 
 		// void ncurses_getyx (resource $window , int &$y , int &$x) - Returns the current cursor position for a window
-		public function getyx($window) {
-			$return_value = ncurses_getyx($window, $y, $x);
+		public function getyx($window = STDSCR) {
+			ncurses_getyx($window, $y, $x);
 			return array(
+				0 => true,
 				'y' => $y,
 				'x' => $x,
 			);
@@ -434,8 +477,14 @@
 		// this point. In this case the function returns TRUE.
 		public function mouse_trafo($y, $x, $toscreen = true) {
 			$return_value = ncurses_mouse_trafo($y, $x, $toscreen);
+			if($return_value === 0) { 
+				$return_value = true;
+			} else { 
+				$return_value = false;
+			}
+
 			return array(
-				'return' => $return_value,
+				0 => $return_value,
 				'y' => $y,
 				'x' => $x,
 			);
@@ -532,7 +581,7 @@
 		}
 
 		// resource ncurses_new_panel (resource $window) - Create a new panel and associate it with window
-		public function new_panel($window) {
+		public function new_panel($window = STDSCR) {
 			return ncurses_new_panel($window);
 		}
 
@@ -543,7 +592,7 @@
 
 		// resource ncurses_newwin (int $rows , int $cols , int $y , int $x) - Create a new window
 		public function newwin($rows, $cols, $y, $x) {
-			return ncurses_newwin($rows, $cols, $y, $x);
+			return new Window($rows, $cols, $y, $x);
 		}
 
 		// bool ncurses_nl (void) - Translate newline and carriage return / line feed
@@ -630,7 +679,7 @@
 		}
 
 		// int ncurses_refresh (int $ch) - Refresh screen
-		public function refresh($ch) {
+		public function refresh($ch = STDSCR) {
 			return ncurses_refresh($ch);
 		}
 
