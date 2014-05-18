@@ -967,5 +967,26 @@
 			return ncurses_wvline($window, $charattr, $n);
 		}
 	}
+	/* For expiramentation only */
 
-	// EOF
+	/*class UncursesWindow {
+		private $window, $rows, $cols, $y, $x;
+
+		function __construct($rows, $cols, $y, $x) {
+			$this->rows = $rows;
+			$this->cols = $cols;
+			$this->y = $y;
+			$this->x = $x;
+			$this->create  = ncurses_newwin($rows, $cols, $y, $x);
+		}
+
+		function delete() { 
+			ncurses_delwin($this->window);
+
+		}
+
+		function __destruct() { 
+			ncurses_delwin($this
+	}*/
+
+	// FIN
