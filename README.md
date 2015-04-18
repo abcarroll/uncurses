@@ -15,6 +15,7 @@ The main code is wrapped in the `uncurses` class.  Changes include:
  * Make sure all functions return consistent return values
  * More logic code to make common tasks easier
  * Find out why x, y is typically reversed as y, x and if for none other than an arbitrary reason, reverse them back to the normal convention of x, y.
+ * Break down code into multiple small classes.  For example, a window class, a text class, and so-on.
 
 ## Heavy Development ##
 Both the PHP extension and Uncurses are currently expiramental.  It's my goal that Uncurses will become a __consistent__ interface, meaning that even if the underlying PHP extension drastically changes, the Uncurses API will stay the same.  However, I am still working on producing the first "release", so until then, expect drastic changes, including arbitrary method name changes.

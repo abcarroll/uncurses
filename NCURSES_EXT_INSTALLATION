@@ -6,10 +6,7 @@
 
 # If you have improvements, feel free to submit them.
 
-apt-get install php-pear
-apt-get install php5-dev
-apt-get install ncurses-dev
-apt-get install libncursesw5-dev
+apt-get install php-pear php5-dev ncurses-dev libncursesw5-dev
 pecl install ncurses
 
 # Additional, I had to personally:
