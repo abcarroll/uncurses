@@ -2,7 +2,7 @@
     /*
        * uncurses, The usable 'ncurses for php' interface
        *
-       * Copyright (c) 2013, Armond B. Carroll III, ben@hl9.net
+       * Copyright (c) 2013-2015, Armond B. Carroll III, ben@hl9.net
        * This file is a part of the uncurses library.
        *
        * Redistribution and use in source and binary forms, with or without
