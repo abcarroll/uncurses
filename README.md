@@ -11,10 +11,10 @@ The main code is wrapped in the `uncurses` class.  Changes include:
  * Removal of redundant functions.  Some ncurses functions really didn't make sense in the context of PHP, such as the 'n' functions, which output text to the specified length.  If you wanted to do this, you probably would of used PHP's `substr()` instead to begin with. 
 
 ## To Do ##
- * Windows and panels wrapped in their own respective objects/classes
- * Make sure all functions return consistent return values
+ * Windows and panels wrapped in their own respective objects/classes **In Progress**
+ * Make sure all functions return consistent return values **In progress**
  * More logic code to make common tasks easier
- * Find out why x, y is typically reversed as y, x and if for none other than an arbitrary reason, reverse them back to the normal convention of x, y.
+ * Find out why x, y is typically reversed as y, x and if for none other than an arbitrary reason, reverse them back to the normal convention of x, y. - *According to one IRC user, it's because ansi sequences use row, column which would correlate to y,x.  Therefore, it should be perfectly fine to change them all to x, y.*
  * Break down code into multiple small classes.  For example, a window class, a text class, and so-on.
 
 ## Heavy Development ##
