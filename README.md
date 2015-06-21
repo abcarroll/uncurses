@@ -4,7 +4,7 @@ Uncurses (un - curses) is the __U__sable __n__curses library.  It is the ncurses
 The main code is wrapped in the `uncurses` class.  Changes include:
 
  * Object oriented interface
- * No pass-by-refrence.  
+ * No pass-by-reference.
  * Subjectively better function (method) names.
  * Return values that make sense.  Many of the ncurses C functions return for example 1 on failure, which were passed on to PHP's wrapper extension.
  * Combined many-methods-in-one.  For example, instead of two separate functions `ncurses_mvaddstr()` and `ncurses_addstr()`, with one moving to the Y, X given, and the other not, I reduced this into single methods, like `ncurses_addstr($text, [$y, [$x]])`.  If you specify the `$y, $x`, you get expected result of moving the cursor.  If you do not, you get the expected result of not moving the cursor.
@@ -18,7 +18,7 @@ The main code is wrapped in the `uncurses` class.  Changes include:
  * Break down code into multiple small classes.  For example, a window class, a text class, and so-on.
 
 ## Heavy Development ##
-Both the PHP extension and Uncurses are currently expiramental.  It's my goal that Uncurses will become a __consistent__ interface, meaning that even if the underlying PHP extension drastically changes, the Uncurses API will stay the same.  However, I am still working on producing the first "release", so until then, expect drastic changes, including arbitrary method name changes.
+Both the PHP extension and Uncurses are currently experimental.  It's my goal that Uncurses will become a __consistent__ interface, meaning that even if the underlying PHP extension drastically changes, the Uncurses API will stay the same.  However, I am still working on producing the first "release", so until then, expect drastic changes, including arbitrary method name changes.
 
 ## Short Documentation ##
 
