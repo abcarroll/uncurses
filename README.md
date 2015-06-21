@@ -8,7 +8,7 @@ The main code is wrapped in the `uncurses` class.  Changes include:
  * Subjectively better function (method) names.
  * Return values that make sense.  Many of the ncurses C functions return for example 1 on failure, which were passed on to PHP's wrapper extension.
  * Combined many-methods-in-one.  For example, instead of two separate functions `ncurses_mvaddstr()` and `ncurses_addstr()`, with one moving to the Y, X given, and the other not, I reduced this into single methods, like `ncurses_addstr($text, [$y, [$x]])`.  If you specify the `$y, $x`, you get expected result of moving the cursor.  If you do not, you get the expected result of not moving the cursor.
- * Removal of redundant functions.  Some ncurses functions really didn't make sense in the context of PHP, such as the 'n' functions, which output text to the specified length.  If you wanted to do this, you probably would of used PHP's `substr()` instead to begin with. 
+ * Removal of redundant functions.  Some ncurses functions really didn't make sense in the context of PHP, such as the 'n' functions, which output text to the specified length.  If you wanted to do this, you probably would have used PHP's `substr()` instead to begin with.
 
 ## To Do ##
  * Windows and panels wrapped in their own respective objects/classes **In Progress**
