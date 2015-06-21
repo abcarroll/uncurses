@@ -1,74 +1,346 @@
 <?php
-/*
-   * uncurses, The usable 'ncurses for php' interface
-   *
-   * Copyright (c) 2013-2015, Armond B. Carroll III, ben@hl9.net
-   * This file is a part of the uncurses library.
-   *
-   * Redistribution and use in source and binary forms, with or without
-   * modification, are permitted provided that the following conditions are met:
-   *
-   * 1. Redistributions of source code must retain the above copyright notice,
-   *    this list of conditions and the following disclaimer.
-   *
-   * 2. Redistributions in binary form must reproduce the above copyright
-   *    notice, this list of conditions and the following disclaimer in the
-   *    documentation and/or other materials provided with the distribution.
-   *
-   * 3. No one other than the copyright holder, listed above, has the right to
-   *    modify the terms applicable to covered code created under this License.
-   *
-   * THIS SOFTWARE IS PROVIDED BY THE AUTHOR AND CONTRIBUTORS ``AS IS'' AND ANY
-   * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
-   * WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
-   * DISCLAIMED. IN NO EVENT SHALL THE AUTHOR OR CONTRIBUTORS BE LIABLE FOR ANY
-   * DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
-   * (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
-   * SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
-   * CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
-   * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
-   * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH
-   * DAMAGE.
-   *
-   * This file includes textual descriptions and prototype names, many verbatim
-   * from the PHP Manual, which are (c) The PHP Documentation Group, and covered
-   * under the Creative Commons Attribution 3.0 License.  The author claims no
-   * ownership of such material, and also extends a huge thanks the PHP
-   * Documentation Group for their work.
-   */
 
-//namespace ucurses;
+/*
+ * Uncurses, The usable 'ncurses for php' interface
+ *
+ * Copyright (c) 2013-2015, Armond B. Carroll III, ben@hl9.net
+ * This file is a part of the Uncurses Library.
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions are met:
+ *
+ * 1. Redistributions of source code must retain the above copyright notice,
+ *    this list of conditions and the following disclaimer.
+ *
+ * 2. Redistributions in binary form must reproduce the above copyright
+ *    notice, this list of conditions and the following disclaimer in the
+ *    documentation and/or other materials provided with the distribution.
+ *
+ * 3. No one other than the copyright holder, listed above, has the right to
+ *    modify the terms applicable to covered code created under this License.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE AUTHOR AND CONTRIBUTORS ``AS IS'' AND ANY
+ * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+ * WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+ * DISCLAIMED. IN NO EVENT SHALL THE AUTHOR OR CONTRIBUTORS BE LIABLE FOR ANY
+ * DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
+ * (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+ * SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+ * CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
+ * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
+ * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH
+ * DAMAGE.
+ *
+ * This file includes textual descriptions and prototype names, many verbatim
+ * from the PHP Manual, which are (c) The PHP Documentation Group, and covered
+ * under the Creative Commons Attribution 3.0 License.  The author claims no
+ * ownership of such material, and also extends a huge thanks the PHP
+ * Documentation Group for their work.
+ */
+
+namespace Uncurses;
 
 /**
- * Class uncurses
+ * Class Uncurses
+ * @package Uncurses
  */
-class uncurses {
-    /**
-     * @param bool $init
+class Uncurses {
+    private $windowList;
+
+    /*
+     * Default options for the Uncurses object. These are all inopts, see man 3CURSES inopts for more in-depth information regarding them.  This is done
+     * particularly because cbreak, keypad, and ... options are inhereited from the tty, so this is an attempt to keep the behavior of Uncurses applications
+     * consistent across different tty's and platforms.
      */
-    public function __construct($init = true) {
-        if($init) {
-            $this->init();
+    private $options = [], $defaultOptions = [
+        'echo'             => false,
+        'waitForReturnKey' => false,
+        'raw'              => false,
+    ];
+
+    /**
+     * This is to be used by program authors to print a prettier error message, and perhaps installation instructions, if the user is lacking the necessary
+     * extensions to use Uncurses, namely the PHP ncurses extension.
+     *
+     * @return bool True if the user has the necessary extensions and is able to run Uncurses, false if not.
+     */
+    public static function hasExtension() {
+        if(function_exists('ncurses_init')) {
+            return true;
+        } else {
+            return false;
         }
     }
 
     /**
-     *
+     * Constructs an uncurses object.
      */
-    public function __destruct() {
-        return $this->end();
+    public function __construct($options = array()) {
+        if(!self::hasExtension()) {
+            throw new \ErrorException("You need the ncurses PHP extension to use uncurses");
+        }
+
+        // void ncurses_init (void) - Initialize ncurses
+        ncurses_init();
+
+        // Merge the local options over the default options
+        $this->options = array_merge($this->defaultOptions, $options);
+
+        foreach($this->options as $optKey => $optVal) {
+            switch($optKey) {
+                case 'echo':
+                    $this->setEchoMode($optVal);
+                    break;
+                case 'waitForReturnKey':
+                    $this->setReturnKeyBufferMode($optVal);
+                    break;
+                case 'raw':
+                    break;
+
+            }
+
+        }
+
     }
 
-    // int ncurses_addch (int $ch) - Add character at current position and advance cursor
-    // SS true,false (int $ascii)
-    // DD Adds a character, specified as the integer //$ascii//, to the current cursor position, and advances the cursor.  If the cursor reaches the end of the row, it will wrap around to the next row.  Some non-printing control characters have special meaning, see [[addstr()]] for those meanings.
-    // RR Returns TRUE on success or FALSE on failure.
     /**
-     * @param      $ascii
-     * @param bool $y
-     * @param bool $x
+     * Called when the uncurses object is destroyed.  The screen will be cleaned up.
+     *
+     * @throws \ErrorException
+     */
+    public function __destruct() {
+        // int ncurses_end (void) - Stop using ncurses, clean up the screen
+        $op = ncurses_end();
+        if($op !== 0) {
+            throw new \ErrorException("Could not clean up Uncurses, maybe something bad happened to the terminal?");
+        }
+    }
+
+    /* * * * * * * * * * * * * * * * * * * * * * * * * * *
+     * inopts(3NCURSES) related methods.
+     *
+     * TODO: There are several methods here that are still in their original state, and need to be updated for consistency.
+     */
+
+    /**
+     * Enables or disables the local keyboard echo. The echo generated by the local tty is always disabled, so even when this is is enabled, getch()-like
+     * methods still capture the input.  This only determines if you wish the output at the current cursor position to be automatic or not.
+     * See the inopts(3NCURSES) manual page for a more in-depth discussion.
+     *
+     * @param bool $enabled
      *
      * @return bool
+     * @throws \ErrorException
+     */
+    public function setEchoMode($enabled) {
+        if($enabled == true) {
+            $op = ncurses_echo();
+        } else {
+            $op = ncurses_noecho();
+        }
+
+        if($op !== 0) {
+            throw new \ErrorException("Could not change Uncurses's echo mode.", $op);
+        } else {
+            return true;
+        }
+    }
+
+    /**
+     * Enables or disables the input buffer.  Normally in applications, the input is buffered until the return key is pressed.  Setting this to false (the
+     * default) will disable that buffer making key presses immedaitely available to the application via getch()-like methods.  When enabled, input will
+     * be buffered until the return key is pressed, and then made to getch()-like methods. Note that this will directly conflict with setRawMode().
+     * See the inopts(3NCURSES) manual page for a more in-depth discussion.  Disabling this is sometimes called "cooked mode" in ncurses documentation.
+     *
+     * @param bool $enabled True to enable buffering until a return key is pressed, false to make key presses immediately available.
+     *
+     * @return bool Returns true if successfully set, and throws an exception on failure.
+     * @throws \ErrorException
+     */
+    public function setReturnKeyBufferMode($enabled) {
+        if($enabled == true) {
+            $op = ncurses_nocbreak();
+        } else {
+            $op = ncurses_cbreak();
+        }
+
+        if($op !== 0) {
+            throw new \ErrorException("Could not change Uncurses's return key wait mode.", $op);
+        } else {
+            return true;
+        }
+    }
+
+    /**
+     * Raw mode is very similar to disableing return key buffering with setReturnKeyBufferMode(), however the difference, to quote the ncurses manually almost
+     * verbatim, is that the difference is "in raw mode, the interrupt, quit, suspend, and flow control characters are all passed through uninterpreted,
+     * instead of generating a signal."  See the inopts(3NCURSES) manual page for a more in-depth discussion.
+     *
+     * @param bool $enabled True to enable raw mode, false to disable it.
+     *
+     * @return bool Returns true if successfully set, and throws an exception on failure.
+     * @throws \ErrorException
+     */
+    public function setRawMode($enabled) {
+        if($enabled == true) {
+            $op = ncurses_nocbreak();
+        } else {
+            $op = ncurses_cbreak();
+        }
+
+        if($op !== 0) {
+            throw new \ErrorException("Could not change Uncurses's raw mode.", $op);
+        } else {
+            return true;
+        }
+    }
+
+    /**
+     * int ncurses_halfdelay (int $tenth) - Put terminal into halfdelay mode
+     *
+     * @param $tenth
+     *
+     * @return int
+     */
+    public function halfdelay($tenth) {
+        return ncurses_halfdelay($tenth);
+    }
+
+    /**
+     * void ncurses_qiflush (void) - Flush on signal characters
+     */
+    public function qiflush() {
+        return ncurses_qiflush();
+    }
+
+    /**
+     * void ncurses_noqiflush (void) - Do not flush on signal characters
+     */
+    public function noqiflush() {
+        return ncurses_noqiflush();
+    }
+
+    /**
+     * void ncurses_timeout (int $millisec) - Set timeout for special key sequences
+     * @TODO: The ncurses library has a notimeout() function, I'm assuming this isn't necessary because we can set $millisec to 0 to achieve the same result?
+     *
+     * @param $millisec
+     */
+    public function timeout($millisec) {
+        return ncurses_timeout($millisec);
+    }
+
+    /**
+     * int ncurses_typeahead (int $fd) - Specify different filedescriptor for typeahead checking
+     *
+     * @param $fd
+     *
+     * @return int
+     */
+    public function typeahead($fd) {
+        return ncurses_typeahead($fd);
+    }
+
+    /* * * * * * * * * * * * * * * * * * * * * * * * * * *
+     * Window control code
+     */
+
+    /**
+     * Creates a new window within ncurses.  Specifying zero for the width and height forces the window to take up the entire screen.
+     *
+     * @param int        $width       The width of the new window.
+     * @param int        $height      The height of the new window.
+     * @param int        $x           The x position (column) of the new window.
+     * @param int        $y           The y position (row) of the new window.
+     * @param string|int $windowAlias A number or string to reference the window later on with.
+     *
+     * @return \Uncurses\Window
+     */
+    public function newWindow($width, $height, $x, $y, $windowAlias = null) {
+        $newWindow = new \Uncurses\Window($this, $width, $height, $x, $y);
+        if($windowAlias === null) {
+            $this->windowList[] = $newWindow;
+        } else {
+            $this->windowList[$windowAlias] = $newWindow;
+        }
+
+        return $newWindow;
+    }
+
+    /**
+     * bool ncurses_delwin (resource $window) - Delete a ncurses window
+     *
+     * @param $windowAlias
+     *
+     * @return bool
+     * @throws \ErrorException Throws an \ErrorException if the window does not exist or is the parent of another window.
+     */
+    public function removeWindow($windowAlias) {
+        unset($this->windowList[$windowAlias]);
+        $op = ncurses_delwin($this->windowList[$windowAlias]);
+
+        if($op !== 0) {
+            throw new \ErrorException("Couldn't remove window with alias '$windowAlias', check that it exists and isn't the parent of another window");
+        } else {
+            return true;
+        }
+    }
+
+    public function getWindowList() {
+        return $this->windowList;
+    }
+
+    public function windowCount() {
+        return count($this->windowList);
+    }
+
+    public function hasWindow($windowAlias) {
+        return isset($this->windowList[$windowAlias]);
+    }
+
+    /**
+     * Beep and Flash Methods
+     */
+
+    /**
+     * Let the terminal beep (audible bell).  If a beep isn't possible, it may flash (visual bell) instead.  If neither are possible, it does nothing.
+     * @TODO Appropriate error handling
+     *
+     * @return bool
+     */
+    public function beep() {
+        return ncurses_beep();
+    }
+
+    /**
+     * Let the terminal flash (visual bell).  If a flash isn't possible, it may beep (audible bell) instead.  If neither are possible, it does nothing.
+     * @TODO Appropriate error handling
+     *
+     * @return bool
+     */
+    public function flash() {
+        return ncurses_flash();
+    }
+
+    /*****************************************************************************
+     * End tested code.                                                          *
+     * The code following is totally untested, and is mostly auto-generated code.*
+     *****************************************************************************/
+
+    /**
+     * RR Returns TRUE on success or FALSE on failure.
+     *
+     * @deprecated: This is an autogenerated method, and is likely to be renamed, or changed in the near future.
+     * Add character at current position and advance cursor.
+     * Adds a character, specified as the integer $ascii, to the current cursor position, and advances the cursor.  If the cursor reaches the end of the
+     * row, it will wrap around to the next row.  Some non-printing control characters have special meaning, see addstr() for those meanings.
+     * Original Prototype: int ncurses_addch (int $ch)
+     *
+     * @param string $ascii The ASCII character to add
+     * @param bool   $y
+     * @param bool   $x
+     *
+     * @return bool Returns true on success, or false on failure.
      */
     public function addch($ascii, $y = false, $x = false) {
         if($y === false || $x === false) {
@@ -84,10 +356,13 @@ class uncurses {
         }
     }
 
-    // int ncurses_addchstr (string $s) - Add attributed string at current position
-    // DD I couldn't get this function to do anything.  See the ncurses man pages.  If anyone has a working example of this function, I would like to see it.
-    // RR Returns TRUE on success or FALSE on failure.
     /**
+     * int ncurses_addchstr (string $s) - Add attributed string at current position
+     *
+     * DD I couldn't get this function to do anything.  See the ncurses man pages.  If anyone has a working example of this function, I would like to see it.
+     *
+     * RR Returns TRUE on success or FALSE on failure.
+     *
      * @param      $s
      * @param bool $y
      * @param bool $x
@@ -108,14 +383,22 @@ class uncurses {
         }
     }
 
-    // int ncurses_addstr (string $text) - Output text at current position
-    // SS true,fale (string $text)
-    // DD Outputs a string specified by //$text// at the current cursor position, and advances the cursor.  If the cursor reaches the end of the row, it will wrap around to the next row.   Some non-printing control characters have special meaning:
-    // DD * A backspace moves the cursor one column left, if it as the left edge of the screen already, it does nothing
-    // DD * A newline clears the rest of the row to the right edge of the screen, and then moving the cursor to the first column of the next line
-    // DD * Any other non-printing control characters will be printed in //^X// notation.
-    // RR Returns TRUE on success or FALSE on failure.
     /**
+     * int ncurses_addstr (string $text) - Output text at current position
+     *
+     * SS true,fale (string $text)
+     *
+     * DD Outputs a string specified by //$text// at the current cursor position, and advances the cursor.  If the cursor reaches the end of the row, it will
+     * wrap around to the next row.   Some non-printing control characters have special meaning:
+     *
+     * DD * A backspace moves the cursor one column left, if it as the left edge of the screen already, it does nothing
+     *
+     * DD * A newline clears the rest of the row to the right edge of the screen, and then moving the cursor to the first column of the next line
+     *
+     * DD * Any other non-printing control characters will be printed in //^X// notation.
+     *
+     * RR Returns TRUE on success or FALSE on failure.
+     *
      * @param      $text
      * @param bool $y
      * @param bool $x
@@ -136,11 +419,18 @@ class uncurses {
         }
     }
 
-    // int ncurses_assume_default_colors (int $fg , int $bg) - Define default colors for color
-    // SS true,false (int $fg_pair, int $bg_pair)
-    // DD Specify what background and foreground colors to use for color pair `0`.  You may also specify the special paramters `-1, -1` which signifies to reset to default terminal colors, and is also exactly equivilant to `uncurses::use_default_colors()``.  According to default_colors (3X), "This function will fail if either the terminal does not support the orig_pair or orig_colors capability. If the initialize_pair capability is found, this causes an error as well. "
-    // RR Returns TRUE on success or FALSE on failure.
     /**
+     * int ncurses_assume_default_colors (int $fg , int $bg) - Define default colors for color
+     *
+     * SS true,false (int $fg_pair, int $bg_pair)
+     *
+     * DD Specify what background and foreground colors to use for color pair `0`.  You may also specify the special paramters `-1, -1` which signifies to
+     * reset to default terminal colors, and is also exactly equivilant to `uncurses::use_default_colors()``.  According to default_colors (3X), "This function
+     * will fail if either the terminal does not support the orig_pair or orig_colors capability. If the initialize_pair capability is found, this causes an
+     * error as well. "
+     *
+     * RR Returns TRUE on success or FALSE on failure.
+     *
      * @param $fg
      * @param $bg
      *
@@ -154,9 +444,11 @@ class uncurses {
         }
     }
 
-    // int ncurses_attroff (int $attributes) - Turn off the given attributes
-    // RR Returns TRUE on success or FALSE on failure.
     /**
+     * int ncurses_attroff (int $attributes) - Turn off the given attributes
+     *
+     * RR Returns TRUE on success or FALSE on failure.
+     *
      * @param $attributes
      *
      * @return bool
@@ -169,9 +461,11 @@ class uncurses {
         }
     }
 
-    // int ncurses_attron (int $attributes) - Turn on the given attributes
-    // RR Returns TRUE on success or FALSE on failure.
     /**
+     * int ncurses_attron (int $attributes) - Turn on the given attributes
+     *
+     * RR Returns TRUE on success or FALSE on failure.
+     *
      * @param $attributes
      *
      * @return bool
@@ -184,9 +478,11 @@ class uncurses {
         }
     }
 
-    // int ncurses_attrset (int $attributes) - Set given attributes
-    // RR Returns TRUE on success or FALSE on failure.
     /**
+     * int ncurses_attrset (int $attributes) - Set given attributes
+     *
+     * RR Returns TRUE on success or FALSE on failure.
+     *
      * @param $attributes
      *
      * @return bool
@@ -199,27 +495,25 @@ class uncurses {
         }
     }
 
-    // int ncurses_baudrate (void) - Returns baudrate of terminal
-    // SS int (void)
-    // RR Returns the current baud rate of the terminal as an integer.  For example, __38400__.
     /**
+     * int ncurses_baudrate (void) - Returns baudrate of terminal
+     *
+     * SS int (void)
+     *
+     * RR Returns the current baud rate of the terminal as an integer.  For example, __38400__.
+     *
      * @return int
      */
     public function baudrate() {
         return ncurses_baudrate();
     }
 
-    // int ncurses_beep (void) - Let the terminal beep
     /**
-     * @return int
-     */
-    public function beep() {
-        return ncurses_beep();
-    }
-
-    // int ncurses_bkgd (int $attrchar) - Set background property for terminal screen
-    // RR bkgd() will seemingly always return `true`, unless ncurses hasn't been initialized.
-    /**
+     * int ncurses_bkgd (int $attrchar) - Set background property for terminal screen
+     * @deprecated: This is an autogenerated method, and is likely to be renamed, or changed in the near future.
+     *
+     * RR bkgd() will seemingly always return `true`, unless ncurses hasn't been initialized.
+     *
      * @param $attrchar
      *
      * @return bool
@@ -232,12 +526,13 @@ class uncurses {
         }
     }
 
-    // void ncurses_bkgdset (int $attrchar) - Control screen background
-    // RR bkgd() will seemingly always return `true`, unless ncurses hasn't been initialized.
     /**
+     * void ncurses_bkgdset (int $attrchar) - Control screen background
+     * @deprecated: This is an autogenerated method, and is likely to be renamed, or changed in the near future.
+     *
      * @param $attrchar
      *
-     * @return bool
+     * @return bool bkgd() will seemingly always return `true`, unless ncurses hasn't been initialized.
      */
     public function bkgdset($attrchar) {
         if(ncurses_bkgdset($attrchar) === 0) {
@@ -247,8 +542,12 @@ class uncurses {
         }
     }
 
-    // int ncurses_border (int $left , int $right , int $top , int $bottom , int $tl_corner , int $tr_corner , int $bl_corner , int $br_corner) - Draw a border around the screen using attributed characters
     /**
+     * int ncurses_border (int $left , int $right , int $top , int $bottom , int $tl_corner , int $tr_corner , int $bl_corner , int $br_corner) - Draw a border
+     * around the screen using attributed characters
+     *
+     * @deprecated: This is an autogenerated method, and is likely to be renamed, or changed in the near future.
+     *
      * @param $left
      * @param $right
      * @param $top
@@ -264,8 +563,11 @@ class uncurses {
         return ncurses_border($left, $right, $top, $bottom, $tl_corner, $tr_corner, $bl_corner, $br_corner);
     }
 
-    // int ncurses_bottom_panel (resource $panel) - Moves a visible panel to the bottom of the stack
     /**
+     * int ncurses_bottom_panel (resource $panel) - Moves a visible panel to the bottom of the stack
+     *
+     * @deprecated: This is an autogenerated method, and is likely to be renamed, or changed in the near future.
+     *
      * @param $panel
      *
      * @return int
@@ -274,48 +576,51 @@ class uncurses {
         return ncurses_bottom_panel($panel);
     }
 
-    // bool ncurses_can_change_color (void) - Checks if terminal color definitions can be changed
     /**
+     * bool ncurses_can_change_color (void) - Checks if terminal color definitions can be changed
+     *
+     * @deprecated: This is an autogenerated method, and is likely to be renamed, or changed in the near future.
      * @return bool
      */
     public function can_change_color() {
         return ncurses_can_change_color();
     }
 
-    // bool ncurses_cbreak (void) - Switch of input buffering
     /**
-     * @return bool
-     */
-    public function cbreak() {
-        return ncurses_cbreak();
-    }
-
-    // bool ncurses_clear (void) - Clear screen
-    /**
+     * bool ncurses_clear (void) - Clear screen
+     *
+     * @deprecated: This is an autogenerated method, and is likely to be renamed, or changed in the near future.
      * @return bool
      */
     public function clear() {
         return ncurses_clear();
     }
 
-    // bool ncurses_clrtobot (void) - Clear screen from current position to bottom
     /**
+     * bool ncurses_clrtobot (void) - Clear screen from current position to bottom
+     *
+     * @deprecated: This is an autogenerated method, and is likely to be renamed, or changed in the near future.
      * @return bool
      */
     public function clrtobot() {
         return ncurses_clrtobot();
     }
 
-    // bool ncurses_clrtoeol (void) - Clear screen from current position to end of line
     /**
+     * bool ncurses_clrtoeol (void) - Clear screen from current position to end of line
+     *
+     * @deprecated: This is an autogenerated method, and is likely to be renamed, or changed in the near future.
      * @return bool
      */
     public function clrtoeol() {
         return ncurses_clrtoeol();
     }
 
-    // int ncurses_color_content (int $color , int &$r , int &$g , int &$b) - Retrieves RGB components of a color
     /**
+     * int ncurses_color_content (int $color , int &$r , int &$g , int &$b) - Retrieves RGB components of a color
+     *
+     * @deprecated: This is an autogenerated method, and is likely to be renamed, or changed in the near future.
+     *
      * @param $color
      *
      * @return array|bool
@@ -333,8 +638,11 @@ class uncurses {
         }
     }
 
-    // int ncurses_color_set (int $pair) - Set active foreground and background colors
     /**
+     * int ncurses_color_set (int $pair) - Set active foreground and background colors
+     *
+     * @deprecated: This is an autogenerated method, and is likely to be renamed, or changed in the near future.
+     *
      * @param $pair
      *
      * @return bool
@@ -348,8 +656,11 @@ class uncurses {
         }
     }
 
-    // int ncurses_curs_set (int $visibility) - Set cursor state
     /**
+     * int ncurses_curs_set (int $visibility) - Set cursor state
+     *
+     * @deprecated: This is an autogenerated method, and is likely to be renamed, or changed in the near future.
+     *
      * @param $visibility
      *
      * @return int
@@ -358,24 +669,31 @@ class uncurses {
         return ncurses_curs_set($visibility);
     }
 
-    // bool ncurses_def_prog_mode (void) - Saves terminals (program) mode
     /**
+     * bool ncurses_def_prog_mode (void) - Saves terminals (program) mode
+     *
+     * @deprecated: This is an autogenerated method, and is likely to be renamed, or changed in the near future.
      * @return bool
      */
     public function def_prog_mode() {
         return ncurses_def_prog_mode();
     }
 
-    // bool ncurses_def_shell_mode (void) - Saves terminals (shell) mode
     /**
+     * bool ncurses_def_shell_mode (void) - Saves terminals (shell) mode
+     *
+     * @deprecated: This is an autogenerated method, and is likely to be renamed, or changed in the near future.
      * @return bool
      */
     public function def_shell_mode() {
         return ncurses_def_shell_mode();
     }
 
-    // int ncurses_define_key (string $definition , int $keycode) - Define a keycode
     /**
+     * int ncurses_define_key (string $definition , int $keycode) - Define a keycode
+     *
+     * @deprecated: This is an autogenerated method, and is likely to be renamed, or changed in the near future.
+     *
      * @param $definition
      * @param $keycode
      *
@@ -385,8 +703,11 @@ class uncurses {
         return ncurses_define_key($definition, $keycode);
     }
 
-    // bool ncurses_del_panel (resource $panel) - Remove panel from the stack and delete it (but not the associated window)
     /**
+     * bool ncurses_del_panel (resource $panel) - Remove panel from the stack and delete it (but not the associated window)
+     *
+     * @deprecated: This is an autogenerated method, and is likely to be renamed, or changed in the near future.
+     *
      * @param $panel
      *
      * @return bool
@@ -395,8 +716,11 @@ class uncurses {
         return ncurses_del_panel($panel);
     }
 
-    // int ncurses_delay_output (int $milliseconds) - Delay output on terminal using padding characters
     /**
+     * int ncurses_delay_output (int $milliseconds) - Delay output on terminal using padding characters
+     *
+     * @deprecated: This is an autogenerated method, and is likely to be renamed, or changed in the near future.
+     *
      * @param $milliseconds
      *
      * @return int
@@ -405,146 +729,90 @@ class uncurses {
         return ncurses_delay_output($milliseconds);
     }
 
-    // bool ncurses_delch (void) - Delete character at current position, move rest of line left
     /**
+     * bool ncurses_delch (void) - Delete character at current position, move rest of line left
+     *
+     * @deprecated: This is an autogenerated method, and is likely to be renamed, or changed in the near future.
      * @return bool
      */
     public function delch() {
         return ncurses_delch();
     }
 
-    // bool ncurses_deleteln (void) - Delete line at current position, move rest of screen up
     /**
+     * bool ncurses_deleteln (void) - Delete line at current position, move rest of screen up
+     *
+     * @deprecated: This is an autogenerated method, and is likely to be renamed, or changed in the near future.
      * @return bool
      */
     public function deleteln() {
         return ncurses_deleteln();
     }
 
-    // bool ncurses_delwin (resource $window) - Delete a ncurses window
     /**
-     * @param $window
+     * bool ncurses_doupdate (void) - Write all prepared refreshes to terminal
      *
-     * @return bool
-     */
-    public function delwin($window) {
-        return ncurses_delwin($window);
-    }
-
-    // bool ncurses_doupdate (void) - Write all prepared refreshes to terminal
-    /**
+     * @deprecated: This is an autogenerated method, and is likely to be renamed, or changed in the near future.
      * @return bool
      */
     public function doupdate() {
         return ncurses_doupdate();
     }
 
-    // bool ncurses_echo (void) - Activate keyboard input echo
     /**
-     * @return bool
-     */
-    public function echo_on() {
-        return ncurses_echo();
-    }
-
-    // int ncurses_end (void) - Stop using ncurses, clean up the screen
-    /**
-     * @return int
-     */
-    public function end() {
-        return ncurses_end();
-    }
-
-    // bool ncurses_erase (void) - Erase terminal screen
-    /**
+     * bool ncurses_erase (void) - Erase terminal screen
+     *
+     * @deprecated: This is an autogenerated method, and is likely to be renamed, or changed in the near future.
      * @return bool
      */
     public function erase() {
         return ncurses_erase();
     }
 
-    // string ncurses_erasechar (void) - Returns current erase character
     /**
+     * string ncurses_erasechar (void) - Returns current erase character
+     *
+     * @deprecated: This is an autogenerated method, and is likely to be renamed, or changed in the near future.
      * @return string
      */
     public function erasechar() {
         return ncurses_erasechar();
     }
 
-    // void ncurses_filter (void) - Set LINES for iniscr() and newterm() to 1
     /**
+     * void ncurses_filter (void) - Set LINES for iniscr() and newterm() to 1
+     *
+     * @deprecated: This is an autogenerated method, and is likely to be renamed, or changed in the near future.
      *
      */
     public function filter() {
         return ncurses_filter();
     }
 
-    // bool ncurses_flash (void) - Flash terminal screen (visual bell)
     /**
-     * @return bool
-     */
-    public function flash() {
-        return ncurses_flash();
-    }
-
-    // bool ncurses_flushinp (void) - Flush keyboard input buffer
-    /**
+     * bool ncurses_flushinp (void) - Flush keyboard input buffer
+     *
+     * @deprecated: This is an autogenerated method, and is likely to be renamed, or changed in the near future.
      * @return bool
      */
     public function flushinp() {
         return ncurses_flushinp();
     }
 
-    // int ncurses_getch (void) - Read a character from keyboard
     /**
+     * int ncurses_getch (void) - Read a character from keyboard
+     *
+     * @deprecated: This is an autogenerated method, and is likely to be renamed, or changed in the near future.
      * @return int
      */
-    public function getch() {
+    public function getChar() {
         return ncurses_getch();
     }
 
-    // void ncurses_getmaxyx (resource $window , int &$y , int &$x) - Returns the size of a window
     /**
-     * @param $window
+     * bool ncurses_getmouse (array &$mevent) - Reads mouse event
      *
-     * @return array
-     */
-    public function getmaxyx($window = STDSCR) {
-        ncurses_getmaxyx($window, $y, $x);
-
-        return array(
-            0   => true,
-            'y' => $y,
-            'x' => $x
-        );
-    }
-
-    // New function
-    /**
-     * @param $window
-     *
-     * @return mixed
-     */
-    public function getmaxx($window = STDSCR) {
-        $value = $this->getmaxyx($window);
-
-        return $value['x'];
-    }
-
-    // New function
-    /**
-     * @param $window
-     *
-     * @return mixed
-     */
-    public function getmaxy($window = STDSCR) {
-        $value = $this->getmaxyx($window);
-
-        return $value['y'];
-    }
-
-    // bool ncurses_getmouse (array &$mevent) - Reads mouse event
-    /**
+     * @deprecated: This is an autogenerated method, and is likely to be renamed, or changed in the near future.
      * @return bool
      */
     public function getmouse() {
@@ -557,58 +825,41 @@ class uncurses {
         }
     }
 
-    // void ncurses_getyx (resource $window , int &$y , int &$x) - Returns the current cursor position for a window
     /**
-     * @param $window
+     * bool ncurses_has_colors (void) - Checks if terminal has color capabilities
      *
-     * @return array
-     */
-    public function getyx($window = STDSCR) {
-        ncurses_getyx($window, $y, $x);
-
-        return array(
-            0   => true,
-            'y' => $y,
-            'x' => $x,
-        );
-    }
-
-    // int ncurses_halfdelay (int $tenth) - Put terminal into halfdelay mode
-    /**
-     * @param $tenth
-     *
-     * @return int
-     */
-    public function halfdelay($tenth) {
-        return ncurses_halfdelay($tenth);
-    }
-
-    // bool ncurses_has_colors (void) - Checks if terminal has color capabilities
-    /**
+     * @deprecated: This is an autogenerated method, and is likely to be renamed, or changed in the near future.
      * @return bool
      */
     public function has_colors() {
         return ncurses_has_colors();
     }
 
-    // bool ncurses_has_ic (void) - Check for insert- and delete-capabilities
     /**
+     * bool ncurses_has_ic (void) - Check for insert- and delete-capabilities
+     *
+     * @deprecated: This is an autogenerated method, and is likely to be renamed, or changed in the near future.
      * @return bool
      */
     public function has_ic() {
         return ncurses_has_ic();
     }
 
-    // bool ncurses_has_il (void) - Check for line insert- and delete-capabilities
     /**
+     * bool ncurses_has_il (void) - Check for line insert- and delete-capabilities
+     *
+     * @deprecated: This is an autogenerated method, and is likely to be renamed, or changed in the near future.
      * @return bool
      */
     public function has_il() {
         return ncurses_has_il();
     }
 
-    // int ncurses_has_key (int $keycode) - Check for presence of a function key on terminal keyboard
     /**
+     * int ncurses_has_key (int $keycode) - Check for presence of a function key on terminal keyboard
+     *
+     * @deprecated: This is an autogenerated method, and is likely to be renamed, or changed in the near future.
+     *
      * @param $keycode
      *
      * @return int
@@ -617,8 +868,11 @@ class uncurses {
         return ncurses_has_key($keycode);
     }
 
-    // int ncurses_hide_panel (resource $panel) - Remove panel from the stack, making it invisible
     /**
+     * int ncurses_hide_panel (resource $panel) - Remove panel from the stack, making it invisible
+     *
+     * @deprecated: This is an autogenerated method, and is likely to be renamed, or changed in the near future.
+     *
      * @param $panel
      *
      * @return int
@@ -627,8 +881,11 @@ class uncurses {
         return ncurses_hide_panel($panel);
     }
 
-    // int ncurses_hline (int $charattr , int $n) - Draw a horizontal line at current position using an attributed character and max. n characters long
     /**
+     * int ncurses_hline (int $charattr , int $n) - Draw a horizontal line at current position using an attributed character and max. n characters long
+     *
+     * @deprecated: This is an autogenerated method, and is likely to be renamed, or changed in the near future.
+     *
      * @param $charattr
      * @param $n
      *
@@ -638,16 +895,21 @@ class uncurses {
         return ncurses_hline($charattr, $n);
     }
 
-    // string ncurses_inch (void) - Get character and attribute at current position
     /**
+     * string ncurses_inch (void) - Get character and attribute at current position
+     *
+     * @deprecated: This is an autogenerated method, and is likely to be renamed, or changed in the near future.
      * @return string
      */
     public function inch() {
         return ncurses_inch();
     }
 
-    // int ncurses_init_color (int $color , int $r , int $g , int $b) - Define a terminal color
     /**
+     * int ncurses_init_color (int $color , int $r , int $g , int $b) - Define a terminal color
+     *
+     * @deprecated: This is an autogenerated method, and is likely to be renamed, or changed in the near future.
+     *
      * @param $color
      * @param $r
      * @param $g
@@ -659,8 +921,11 @@ class uncurses {
         return ncurses_init_color($color, $r, $g, $b);
     }
 
-    // int ncurses_init_pair (int $pair , int $fg , int $bg) - Define a color pair
     /**
+     * int ncurses_init_pair (int $pair , int $fg , int $bg) - Define a color pair
+     *
+     * @deprecated: This is an autogenerated method, and is likely to be renamed, or changed in the near future.
+     *
      * @param $pair
      * @param $fg
      * @param $bg
@@ -671,16 +936,11 @@ class uncurses {
         return ncurses_init_pair($pair, $fg, $bg);
     }
 
-    // void ncurses_init (void) - Initialize ncurses
     /**
+     * int ncurses_insch (int $character) - Insert character moving rest of line including character at current position
      *
-     */
-    public function init() {
-        return ncurses_init();
-    }
-
-    // int ncurses_insch (int $character) - Insert character moving rest of line including character at current position
-    /**
+     * @deprecated: This is an autogenerated method, and is likely to be renamed, or changed in the near future.
+     *
      * @param $character
      *
      * @return int
@@ -689,8 +949,11 @@ class uncurses {
         return ncurses_insch($character);
     }
 
-    // int ncurses_insdelln (int $count) - Insert lines before current line scrolling down (negative numbers delete and scroll up)
     /**
+     * int ncurses_insdelln (int $count) - Insert lines before current line scrolling down (negative numbers delete and scroll up)
+     *
+     * @deprecated: This is an autogenerated method, and is likely to be renamed, or changed in the near future.
+     *
      * @param $count
      *
      * @return int
@@ -699,16 +962,21 @@ class uncurses {
         return ncurses_insdelln($count);
     }
 
-    // int ncurses_insertln (void) - Insert a line, move rest of screen down
     /**
+     * int ncurses_insertln (void) - Insert a line, move rest of screen down
+     *
+     * @deprecated: This is an autogenerated method, and is likely to be renamed, or changed in the near future.
      * @return int
      */
     public function insertln() {
         return ncurses_insertln();
     }
 
-    // int ncurses_insstr (string $text) - Insert string at current position, moving rest of line right
     /**
+     * int ncurses_insstr (string $text) - Insert string at current position, moving rest of line right
+     *
+     * @deprecated: This is an autogenerated method, and is likely to be renamed, or changed in the near future.
+     *
      * @param $text
      *
      * @return int
@@ -717,9 +985,13 @@ class uncurses {
         return ncurses_insstr($text);
     }
 
-    // int ncurses_instr (string &$buffer) - Reads string from terminal screen
-    // Returns number of characters read as the first element, and buffer read as the second.
     /**
+     * int ncurses_instr (string &$buffer) - Reads string from terminal screen
+     *
+     * Returns number of characters read as the first element, and buffer read as the second.
+     *
+     * @deprecated: This is an autogenerated method, and is likely to be renamed, or changed in the near future.
+     *
      * @param $buffer
      *
      * @return array
@@ -730,16 +1002,21 @@ class uncurses {
         return array($return_value, $buffer);
     }
 
-    // bool ncurses_isendwin (void) - Ncurses is in endwin mode, normal screen output may be performed
     /**
+     * bool ncurses_isendwin (void) - Ncurses is in endwin mode, normal screen output may be performed
+     *
+     * @deprecated: This is an autogenerated method, and is likely to be renamed, or changed in the near future.
      * @return bool
      */
     public function isendwin() {
         return ncurses_isendwin();
     }
 
-    // int ncurses_keyok (int $keycode , bool $enable) - Enable or disable a keycode
     /**
+     * int ncurses_keyok (int $keycode , bool $enable) - Enable or disable a keycode
+     *
+     * @deprecated: This is an autogenerated method, and is likely to be renamed, or changed in the near future.
+     *
      * @param $keycode
      * @param $enable
      *
@@ -749,55 +1026,38 @@ class uncurses {
         return ncurses_keyok($keycode, $enable);
     }
 
-    // int ncurses_keypad (resource $window , bool $bf) - Turns keypad on or off
     /**
-     * @param $window
-     * @param $bf
+     * string ncurses_killchar (void) - Returns current line kill character
      *
-     * @return int
-     */
-    public function keypad($window, $bf) {
-        return ncurses_keypad($window, $bf);
-    }
-
-    // string ncurses_killchar (void) - Returns current line kill character
-    /**
+     * @deprecated: This is an autogenerated method, and is likely to be renamed, or changed in the near future.
      * @return string
      */
     public function killchar() {
         return ncurses_killchar();
     }
 
-    // string ncurses_longname (void) - Returns terminals description
     /**
+     * string ncurses_longname (void) - Returns terminals description
+     *
+     * @deprecated: This is an autogenerated method, and is likely to be renamed, or changed in the near future.
      * @return string
      */
     public function longname() {
         return ncurses_longname();
     }
 
-    // int ncurses_meta (resource $window , bool $8bit) - Enables/Disable 8-bit meta key information
     /**
-     * @param $window
-     * @param $eightbit
+     * bool ncurses_mouse_trafo (int &$y , int &$x , bool $toscreen) - Transforms coordinates
+     * Via http://linux.die.net/man/3/mouse_trafo
+     * If the parameter to_screen is TRUE, the pointers pY, pX must reference
+     * the coordinates of a location inside the window win. They are converted
+     * to window-relative coordinates and returned through the pointers. If the
+     * conversion was successful, the function returns TRUE. If one of the
+     * parameters was NULL or the location is not inside the window, FALSE is
+     * returned. If to_screen is FALSE, the pointers pY, pX must reference window-relative
+     * coordinates. They are converted to stdscr-relative coordinates if the window win encloses
+     * this point. In this case the function returns TRUE.
      *
-     * @return int
-     */
-    public function meta($window, $eightbit) {
-        return ncurses_meta($window, $eightbit);
-    }
-
-    // bool ncurses_mouse_trafo (int &$y , int &$x , bool $toscreen) - Transforms coordinates
-    // Via http://linux.die.net/man/3/mouse_trafo
-    // If the parameter to_screen is TRUE, the pointers pY, pX must reference
-    // the coordinates of a location inside the window win. They are converted
-    // to window-relative coordinates and returned through the pointers. If the
-    // conversion was successful, the function returns TRUE. If one of the
-    // parameters was NULL or the location is not inside the window, FALSE is
-    // returned. If to_screen is FALSE, the pointers pY, pX must reference window-relative
-    // coordinates. They are converted to stdscr-relative coordinates if the window win encloses
-    // this point. In this case the function returns TRUE.
-    /**
      * @param      $y
      * @param      $x
      * @param bool $toscreen
@@ -819,8 +1079,11 @@ class uncurses {
         );
     }
 
-    // int ncurses_mouseinterval (int $milliseconds) - Set timeout for mouse button clicks
     /**
+     * int ncurses_mouseinterval (int $milliseconds) - Set timeout for mouse button clicks
+     *
+     * @deprecated: This is an autogenerated method, and is likely to be renamed, or changed in the near future.
+     *
      * @param $milliseconds
      *
      * @return int
@@ -829,8 +1092,11 @@ class uncurses {
         return ncurses_mouseinterval($milliseconds);
     }
 
-    // int ncurses_mousemask (int $newmask , int &$oldmask) - Sets mouse options
     /**
+     * int ncurses_mousemask (int $newmask , int &$oldmask) - Sets mouse options
+     *
+     * @deprecated: This is an autogenerated method, and is likely to be renamed, or changed in the near future.
+     *
      * @param $newmask
      *
      * @return array|bool
@@ -844,8 +1110,11 @@ class uncurses {
         }
     }
 
-    // int ncurses_move_panel (resource $panel , int $startx , int $starty) - Moves a panel so that its upper-left corner is at [startx, starty]
     /**
+     * int ncurses_move_panel (resource $panel , int $startx , int $starty) - Moves a panel so that its upper-left corner is at [startx, starty]
+     *
+     * @deprecated: This is an autogenerated method, and is likely to be renamed, or changed in the near future.
+     *
      * @param $panel
      * @param $startx
      * @param $starty
@@ -856,8 +1125,11 @@ class uncurses {
         return ncurses_move_panel($panel, $startx, $starty);
     }
 
-    // int ncurses_move (int $y , int $x) - Move output position
     /**
+     * int ncurses_move (int $y , int $x) - Move output position
+     *
+     * @deprecated: This is an autogenerated method, and is likely to be renamed, or changed in the near future.
+     *
      * @param $y
      * @param $x
      *
@@ -867,8 +1139,11 @@ class uncurses {
         return ncurses_move($y, $x);
     }
 
-    // int ncurses_mvcur (int $old_y , int $old_x , int $new_y , int $new_x) - Move cursor immediately
     /**
+     * int ncurses_mvcur (int $old_y , int $old_x , int $new_y , int $new_x) - Move cursor immediately
+     *
+     * @deprecated: This is an autogenerated method, and is likely to be renamed, or changed in the near future.
+     *
      * @param $old_y
      * @param $old_x
      * @param $new_y
@@ -880,8 +1155,11 @@ class uncurses {
         return ncurses_mvcur($old_y, $old_x, $new_y, $new_x);
     }
 
-    // int ncurses_mvdelch (int $y , int $x) - Move position and delete character, shift rest of line left
     /**
+     * int ncurses_mvdelch (int $y , int $x) - Move position and delete character, shift rest of line left
+     *
+     * @deprecated: This is an autogenerated method, and is likely to be renamed, or changed in the near future.
+     *
      * @param $y
      * @param $x
      *
@@ -891,8 +1169,11 @@ class uncurses {
         return ncurses_mvdelch($y, $x);
     }
 
-    // int ncurses_mvgetch (int $y , int $x) - Move position and get character at new position
     /**
+     * int ncurses_mvgetch (int $y , int $x) - Move position and get character at new position
+     *
+     * @deprecated: This is an autogenerated method, and is likely to be renamed, or changed in the near future.
+     *
      * @param $y
      * @param $x
      *
@@ -902,8 +1183,12 @@ class uncurses {
         return ncurses_mvgetch($y, $x);
     }
 
-    // int ncurses_mvhline (int $y , int $x , int $attrchar , int $n) - Set new position and draw a horizontal line using an attributed character and max. n characters long
     /**
+     * int ncurses_mvhline (int $y , int $x , int $attrchar , int $n) - Set new position and draw a horizontal line using an attributed character and max. n
+     * characters long
+     *
+     * @deprecated: This is an autogenerated method, and is likely to be renamed, or changed in the near future.
+     *
      * @param $y
      * @param $x
      * @param $attrchar
@@ -915,8 +1200,11 @@ class uncurses {
         return ncurses_mvhline($y, $x, $attrchar, $n);
     }
 
-    // int ncurses_mvinch (int $y , int $x) - Move position and get attributed character at new position
     /**
+     * int ncurses_mvinch (int $y , int $x) - Move position and get attributed character at new position
+     *
+     * @deprecated: This is an autogenerated method, and is likely to be renamed, or changed in the near future.
+     *
      * @param $y
      * @param $x
      *
@@ -926,8 +1214,12 @@ class uncurses {
         return ncurses_mvinch($y, $x);
     }
 
-    // int ncurses_mvvline (int $y , int $x , int $attrchar , int $n) - Set new position and draw a vertical line using an attributed character and max. n characters long
     /**
+     * int ncurses_mvvline (int $y , int $x , int $attrchar , int $n) - Set new position and draw a vertical line using an attributed character and max. n
+     * characters long
+     *
+     * @deprecated: This is an autogenerated method, and is likely to be renamed, or changed in the near future.
+     *
      * @param $y
      * @param $x
      * @param $attrchar
@@ -939,21 +1231,11 @@ class uncurses {
         return ncurses_mvvline($y, $x, $attrchar, $n);
     }
 
-    // int ncurses_mvwaddstr (resource $window , int $y , int $x , string $text) - Add string at new position in window
     /**
-     * @param $window
-     * @param $y
-     * @param $x
-     * @param $text
+     * int ncurses_napms (int $milliseconds) - Sleep
      *
-     * @return int
-     */
-    public function mvwaddstr($window, $y, $x, $text) {
-        return ncurses_mvwaddstr($window, $y, $x, $text);
-    }
-
-    // int ncurses_napms (int $milliseconds) - Sleep
-    /**
+     * @deprecated: This is an autogenerated method, and is likely to be renamed, or changed in the near future.
+     *
      * @param $milliseconds
      *
      * @return int
@@ -962,18 +1244,11 @@ class uncurses {
         return ncurses_napms($milliseconds);
     }
 
-    // resource ncurses_new_panel (resource $window) - Create a new panel and associate it with window
     /**
-     * @param $window
+     * resource ncurses_newpad (int $rows , int $cols) - Creates a new pad (window)
      *
-     * @return resource
-     */
-    public function new_panel($window = STDSCR) {
-        return ncurses_new_panel($window);
-    }
-
-    // resource ncurses_newpad (int $rows , int $cols) - Creates a new pad (window)
-    /**
+     * @deprecated: This is an autogenerated method, and is likely to be renamed, or changed in the near future.
+     *
      * @param $rows
      * @param $cols
      *
@@ -983,69 +1258,31 @@ class uncurses {
         return ncurses_newpad($rows, $cols);
     }
 
-    // resource ncurses_newwin (int $rows , int $cols , int $y , int $x) - Create a new window
     /**
-     * @param $rows
-     * @param $cols
-     * @param $y
-     * @param $x
+     * bool ncurses_nl (void) - Translate newline and carriage return / line feed
      *
-     * @return Window
-     */
-    public function newwin($rows, $cols, $y, $x) {
-        return new Window($rows, $cols, $y, $x);
-    }
-
-    // bool ncurses_nl (void) - Translate newline and carriage return / line feed
-    /**
+     * @deprecated: This is an autogenerated method, and is likely to be renamed, or changed in the near future.
      * @return bool
      */
     public function nl() {
         return ncurses_nl();
     }
 
-    // bool ncurses_nocbreak (void) - Switch terminal to cooked mode
     /**
-     * @return bool
-     */
-    public function nocbreak() {
-        return ncurses_nocbreak();
-    }
-
-    // bool ncurses_noecho (void) - Switch off keyboard input echo
-    /**
-     * @return bool
-     */
-    public function echo_off() {
-        return ncurses_noecho();
-    }
-
-    // bool ncurses_nonl (void) - Do not translate newline and carriage return / line feed
-    /**
+     * bool ncurses_nonl (void) - Do not translate newline and carriage return / line feed
+     *
+     * @deprecated: This is an autogenerated method, and is likely to be renamed, or changed in the near future.
      * @return bool
      */
     public function nonl() {
         return ncurses_nonl();
     }
 
-    // void ncurses_noqiflush (void) - Do not flush on signal characters
     /**
+     * int ncurses_pair_content (int $pair , int &$f , int &$b) - Retrieves foreground and background colors of a color pair
      *
-     */
-    public function noqiflush() {
-        return ncurses_noqiflush();
-    }
-
-    // bool ncurses_noraw (void) - Switch terminal out of raw mode
-    /**
-     * @return bool
-     */
-    public function noraw() {
-        return ncurses_noraw();
-    }
-
-    // int ncurses_pair_content (int $pair , int &$f , int &$b) - Retrieves foreground and background colors of a color pair
-    /**
+     * @deprecated: This is an autogenerated method, and is likely to be renamed, or changed in the near future.
+     *
      * @param $pair
      *
      * @return array|bool
@@ -1062,8 +1299,11 @@ class uncurses {
         }
     }
 
-    // resource ncurses_panel_above (resource $panel) - Returns the panel above panel
     /**
+     * resource ncurses_panel_above (resource $panel) - Returns the panel above panel
+     *
+     * @deprecated: This is an autogenerated method, and is likely to be renamed, or changed in the near future.
+     *
      * @param $panel
      *
      * @return resource
@@ -1072,8 +1312,11 @@ class uncurses {
         return ncurses_panel_above($panel);
     }
 
-    // resource ncurses_panel_below (resource $panel) - Returns the panel below panel
     /**
+     * resource ncurses_panel_below (resource $panel) - Returns the panel below panel
+     *
+     * @deprecated: This is an autogenerated method, and is likely to be renamed, or changed in the near future.
+     *
      * @param $panel
      *
      * @return resource
@@ -1082,8 +1325,11 @@ class uncurses {
         return ncurses_panel_below($panel);
     }
 
-    // resource ncurses_panel_window (resource $panel) - Returns the window associated with panel
     /**
+     * resource ncurses_panel_window (resource $panel) - Returns the window associated with panel
+     *
+     * @deprecated: This is an autogenerated method, and is likely to be renamed, or changed in the near future.
+     *
      * @param $panel
      *
      * @return resource
@@ -1092,8 +1338,12 @@ class uncurses {
         return ncurses_panel_window($panel);
     }
 
-    // int ncurses_pnoutrefresh (resource $pad , int $pminrow , int $pmincol , int $sminrow , int $smincol , int $smaxrow , int $smaxcol) - Copies a region from a pad into the virtual screen
     /**
+     * int ncurses_pnoutrefresh (resource $pad , int $pminrow , int $pmincol , int $sminrow , int $smincol , int $smaxrow , int $smaxcol) - Copies a region
+     * from a pad into the virtual screen
+     *
+     * @deprecated: This is an autogenerated method, and is likely to be renamed, or changed in the near future.
+     *
      * @param $pad
      * @param $pminrow
      * @param $pmincol
@@ -1108,8 +1358,12 @@ class uncurses {
         return ncurses_pnoutrefresh($pad, $pminrow, $pmincol, $sminrow, $smincol, $smaxrow, $smaxcol);
     }
 
-    // int ncurses_prefresh (resource $pad , int $pminrow , int $pmincol , int $sminrow , int $smincol , int $smaxrow , int $smaxcol) - Copies a region from a pad into the virtual screen
     /**
+     * int ncurses_prefresh (resource $pad , int $pminrow , int $pmincol , int $sminrow , int $smincol , int $smaxrow , int $smaxcol) - Copies a region from a
+     * pad into the virtual screen
+     *
+     * @deprecated: This is an autogenerated method, and is likely to be renamed, or changed in the near future.
+     *
      * @param $pad
      * @param $pminrow
      * @param $pmincol
@@ -1124,8 +1378,11 @@ class uncurses {
         return ncurses_prefresh($pad, $pminrow, $pmincol, $sminrow, $smincol, $smaxrow, $smaxcol);
     }
 
-    // int ncurses_putp (string $text) - Apply padding information to the string and output it
     /**
+     * int ncurses_putp (string $text) - Apply padding information to the string and output it
+     *
+     * @deprecated: This is an autogenerated method, and is likely to be renamed, or changed in the near future.
+     *
      * @param $text
      *
      * @return int
@@ -1134,24 +1391,11 @@ class uncurses {
         return ncurses_putp($text);
     }
 
-    // void ncurses_qiflush (void) - Flush on signal characters
     /**
+     * int ncurses_refresh (int $ch) - Refresh screen
      *
-     */
-    public function qiflush() {
-        return ncurses_qiflush();
-    }
-
-    // bool ncurses_raw (void) - Switch terminal into raw mode
-    /**
-     * @return bool
-     */
-    public function raw() {
-        return ncurses_raw();
-    }
-
-    // int ncurses_refresh (int $ch) - Refresh screen
-    /**
+     * @deprecated: This is an autogenerated method, and is likely to be renamed, or changed in the near future.
+     *
      * @param $ch
      *
      * @return int
@@ -1160,8 +1404,11 @@ class uncurses {
         return ncurses_refresh($ch);
     }
 
-    // int ncurses_replace_panel (resource $panel , resource $window) - Replaces the window associated with panel
     /**
+     * int ncurses_replace_panel (resource $panel , resource $window) - Replaces the window associated with panel
+     *
+     * @deprecated: This is an autogenerated method, and is likely to be renamed, or changed in the near future.
+     *
      * @param $panel
      * @param $window
      *
@@ -1171,40 +1418,51 @@ class uncurses {
         return ncurses_replace_panel($panel, $window);
     }
 
-    // int ncurses_reset_prog_mode (void) - Resets the prog mode saved by def_prog_mode
     /**
+     * int ncurses_reset_prog_mode (void) - Resets the prog mode saved by def_prog_mode
+     *
+     * @deprecated: This is an autogenerated method, and is likely to be renamed, or changed in the near future.
      * @return int
      */
     public function reset_prog_mode() {
         return ncurses_reset_prog_mode();
     }
 
-    // int ncurses_reset_shell_mode (void) - Resets the shell mode saved by def_shell_mode
     /**
+     * int ncurses_reset_shell_mode (void) - Resets the shell mode saved by def_shell_mode
+     *
+     * @deprecated: This is an autogenerated method, and is likely to be renamed, or changed in the near future.
      * @return int
      */
     public function reset_shell_mode() {
         return ncurses_reset_shell_mode();
     }
 
-    // bool ncurses_resetty (void) - Restores saved terminal state
     /**
+     * bool ncurses_resetty (void) - Restores saved terminal state
+     *
+     * @deprecated: This is an autogenerated method, and is likely to be renamed, or changed in the near future.
      * @return bool
      */
     public function resetty() {
         return ncurses_resetty();
     }
 
-    // bool ncurses_savetty (void) - Saves terminal state
     /**
+     * bool ncurses_savetty (void) - Saves terminal state
+     *
+     * @deprecated: This is an autogenerated method, and is likely to be renamed, or changed in the near future.
      * @return bool
      */
     public function savetty() {
         return ncurses_savetty();
     }
 
-    // int ncurses_scr_dump (string $filename) - Dump screen content to file
     /**
+     * int ncurses_scr_dump (string $filename) - Dump screen content to file
+     *
+     * @deprecated: This is an autogenerated method, and is likely to be renamed, or changed in the near future.
+     *
      * @param $filename
      *
      * @return int
@@ -1213,8 +1471,11 @@ class uncurses {
         return ncurses_scr_dump($filename);
     }
 
-    // int ncurses_scr_init (string $filename) - Initialize screen from file dump
     /**
+     * int ncurses_scr_init (string $filename) - Initialize screen from file dump
+     *
+     * @deprecated: This is an autogenerated method, and is likely to be renamed, or changed in the near future.
+     *
      * @param $filename
      *
      * @return int
@@ -1223,8 +1484,11 @@ class uncurses {
         return ncurses_scr_init($filename);
     }
 
-    // int ncurses_scr_restore (string $filename) - Restore screen from file dump
     /**
+     * int ncurses_scr_restore (string $filename) - Restore screen from file dump
+     *
+     * @deprecated: This is an autogenerated method, and is likely to be renamed, or changed in the near future.
+     *
      * @param $filename
      *
      * @return int
@@ -1233,8 +1497,11 @@ class uncurses {
         return ncurses_scr_restore($filename);
     }
 
-    // int ncurses_scr_set (string $filename) - Inherit screen from file dump
     /**
+     * int ncurses_scr_set (string $filename) - Inherit screen from file dump
+     *
+     * @deprecated: This is an autogenerated method, and is likely to be renamed, or changed in the near future.
+     *
      * @param $filename
      *
      * @return int
@@ -1243,8 +1510,11 @@ class uncurses {
         return ncurses_scr_set($filename);
     }
 
-    // int ncurses_scrl (int $count) - Scroll window content up or down without changing current position
     /**
+     * int ncurses_scrl (int $count) - Scroll window content up or down without changing current position
+     *
+     * @deprecated: This is an autogenerated method, and is likely to be renamed, or changed in the near future.
+     *
      * @param $count
      *
      * @return int
@@ -1253,8 +1523,11 @@ class uncurses {
         return ncurses_scrl($count);
     }
 
-    // int ncurses_show_panel (resource $panel) - Places an invisible panel on top of the stack, making it visible
     /**
+     * int ncurses_show_panel (resource $panel) - Places an invisible panel on top of the stack, making it visible
+     *
+     * @deprecated: This is an autogenerated method, and is likely to be renamed, or changed in the near future.
+     *
      * @param $panel
      *
      * @return int
@@ -1263,16 +1536,21 @@ class uncurses {
         return ncurses_show_panel($panel);
     }
 
-    // int ncurses_slk_attr (void) - Returns current soft label key attribute
     /**
+     * int ncurses_slk_attr (void) - Returns current soft label key attribute
+     *
+     * @deprecated: This is an autogenerated method, and is likely to be renamed, or changed in the near future.
      * @return int
      */
     public function slk_attr() {
         return ncurses_slk_attr();
     }
 
-    // int ncurses_slk_attroff (int $intarg) - Turn off the given attributes for soft function-key labels
     /**
+     * int ncurses_slk_attroff (int $intarg) - Turn off the given attributes for soft function-key labels
+     *
+     * @deprecated: This is an autogenerated method, and is likely to be renamed, or changed in the near future.
+     *
      * @param $intarg
      *
      * @return int
@@ -1281,8 +1559,11 @@ class uncurses {
         return ncurses_slk_attroff($intarg);
     }
 
-    // int ncurses_slk_attron (int $intarg) - Turn on the given attributes for soft function-key labels
     /**
+     * int ncurses_slk_attron (int $intarg) - Turn on the given attributes for soft function-key labels
+     *
+     * @deprecated: This is an autogenerated method, and is likely to be renamed, or changed in the near future.
+     *
      * @param $intarg
      *
      * @return int
@@ -1291,8 +1572,11 @@ class uncurses {
         return ncurses_slk_attron($intarg);
     }
 
-    // int ncurses_slk_attrset (int $intarg) - Set given attributes for soft function-key labels
     /**
+     * int ncurses_slk_attrset (int $intarg) - Set given attributes for soft function-key labels
+     *
+     * @deprecated: This is an autogenerated method, and is likely to be renamed, or changed in the near future.
+     *
      * @param $intarg
      *
      * @return int
@@ -1301,16 +1585,21 @@ class uncurses {
         return ncurses_slk_attrset($intarg);
     }
 
-    // bool ncurses_slk_clear (void) - Clears soft labels from screen
     /**
+     * bool ncurses_slk_clear (void) - Clears soft labels from screen
+     *
+     * @deprecated: This is an autogenerated method, and is likely to be renamed, or changed in the near future.
      * @return bool
      */
     public function slk_clear() {
         return ncurses_slk_clear();
     }
 
-    // int ncurses_slk_color (int $intarg) - Sets color for soft label keys
     /**
+     * int ncurses_slk_color (int $intarg) - Sets color for soft label keys
+     *
+     * @deprecated: This is an autogenerated method, and is likely to be renamed, or changed in the near future.
+     *
      * @param $intarg
      *
      * @return int
@@ -1319,8 +1608,11 @@ class uncurses {
         return ncurses_slk_color($intarg);
     }
 
-    // bool ncurses_slk_init (int $format) - Initializes soft label key functions
     /**
+     * bool ncurses_slk_init (int $format) - Initializes soft label key functions
+     *
+     * @deprecated: This is an autogenerated method, and is likely to be renamed, or changed in the near future.
+     *
      * @param $format
      *
      * @return bool
@@ -1329,32 +1621,41 @@ class uncurses {
         return ncurses_slk_init($format);
     }
 
-    // bool ncurses_slk_noutrefresh (void) - Copies soft label keys to virtual screen
     /**
+     * bool ncurses_slk_noutrefresh (void) - Copies soft label keys to virtual screen
+     *
+     * @deprecated: This is an autogenerated method, and is likely to be renamed, or changed in the near future.
      * @return bool
      */
     public function slk_noutrefresh() {
         return ncurses_slk_noutrefresh();
     }
 
-    // int ncurses_slk_refresh (void) - Copies soft label keys to screen
     /**
+     * int ncurses_slk_refresh (void) - Copies soft label keys to screen
+     *
+     * @deprecated: This is an autogenerated method, and is likely to be renamed, or changed in the near future.
      * @return int
      */
     public function slk_refresh() {
         return ncurses_slk_refresh();
     }
 
-    // int ncurses_slk_restore (void) - Restores soft label keys
     /**
+     * int ncurses_slk_restore (void) - Restores soft label keys
+     *
+     * @deprecated: This is an autogenerated method, and is likely to be renamed, or changed in the near future.
      * @return int
      */
     public function slk_restore() {
         return ncurses_slk_restore();
     }
 
-    // bool ncurses_slk_set (int $labelnr , string $label , int $format) - Sets function key labels
     /**
+     * bool ncurses_slk_set (int $labelnr , string $label , int $format) - Sets function key labels
+     *
+     * @deprecated: This is an autogenerated method, and is likely to be renamed, or changed in the near future.
+     *
      * @param $labelnr
      * @param $label
      * @param $format
@@ -1365,64 +1666,71 @@ class uncurses {
         return ncurses_slk_set($labelnr, $label, $format);
     }
 
-    // int ncurses_slk_touch (void) - Forces output when ncurses_slk_noutrefresh is performed
     /**
+     * int ncurses_slk_touch (void) - Forces output when ncurses_slk_noutrefresh is performed
+     *
+     * @deprecated: This is an autogenerated method, and is likely to be renamed, or changed in the near future.
      * @return int
      */
     public function slk_touch() {
         return ncurses_slk_touch();
     }
 
-    // int ncurses_standend (void) - Stop using "standout" attribute
     /**
+     * int ncurses_standend (void) - Stop using "standout" attribute
+     *
+     * @deprecated: This is an autogenerated method, and is likely to be renamed, or changed in the near future.
      * @return int
      */
     public function standend() {
         return ncurses_standend();
     }
 
-    // int ncurses_standout (void) - Start using "standout" attribute
     /**
+     * int ncurses_standout (void) - Start using "standout" attribute
+     *
+     * @deprecated: This is an autogenerated method, and is likely to be renamed, or changed in the near future.
      * @return int
      */
     public function standout() {
         return ncurses_standout();
     }
 
-    // int ncurses_start_color (void) - Initializes color functionality
     /**
+     * int ncurses_start_color (void) - Initializes color functionality
+     *
+     * @deprecated: This is an autogenerated method, and is likely to be renamed, or changed in the near future.
      * @return int
      */
     public function start_color() {
         return ncurses_start_color();
     }
 
-    // bool ncurses_termattrs (void) - Returns a logical OR of all attribute flags supported by terminal
     /**
+     * bool ncurses_termattrs (void) - Returns a logical OR of all attribute flags supported by terminal
+     *
+     * @deprecated: This is an autogenerated method, and is likely to be renamed, or changed in the near future.
      * @return bool
      */
     public function termattrs() {
         return ncurses_termattrs();
     }
 
-    // string ncurses_termname (void) - Returns terminals (short)-name
     /**
+     * string ncurses_termname (void) - Returns terminals (short)-name
+     *
+     * @deprecated: This is an autogenerated method, and is likely to be renamed, or changed in the near future.
      * @return string
      */
     public function termname() {
         return ncurses_termname();
     }
 
-    // void ncurses_timeout (int $millisec) - Set timeout for special key sequences
     /**
-     * @param $millisec
-     */
-    public function timeout($millisec) {
-        return ncurses_timeout($millisec);
-    }
-
-    // int ncurses_top_panel (resource $panel) - Moves a visible panel to the top of the stack
-    /**
+     * int ncurses_top_panel (resource $panel) - Moves a visible panel to the top of the stack
+     *
+     * @deprecated: This is an autogenerated method, and is likely to be renamed, or changed in the near future.
+     *
      * @param $panel
      *
      * @return int
@@ -1431,18 +1739,11 @@ class uncurses {
         return ncurses_top_panel($panel);
     }
 
-    // int ncurses_typeahead (int $fd) - Specify different filedescriptor for typeahead checking
     /**
-     * @param $fd
+     * int ncurses_ungetch (int $keycode) - Put a character back into the input stream
      *
-     * @return int
-     */
-    public function typeahead($fd) {
-        return ncurses_typeahead($fd);
-    }
-
-    // int ncurses_ungetch (int $keycode) - Put a character back into the input stream
-    /**
+     * @deprecated: This is an autogenerated method, and is likely to be renamed, or changed in the near future.
+     *
      * @param $keycode
      *
      * @return int
@@ -1451,8 +1752,11 @@ class uncurses {
         return ncurses_ungetch($keycode);
     }
 
-    // bool ncurses_ungetmouse (array $mevent) - Pushes mouse event to queue
     /**
+     * bool ncurses_ungetmouse (array $mevent) - Pushes mouse event to queue
+     *
+     * @deprecated: This is an autogenerated method, and is likely to be renamed, or changed in the near future.
+     *
      * @param $mevent
      *
      * @return bool
@@ -1461,32 +1765,42 @@ class uncurses {
         return ncurses_ungetmouse($mevent);
     }
 
-    // void ncurses_update_panels (void) - Refreshes the virtual screen to reflect the relations between panels in the stack
     /**
+     * void ncurses_update_panels (void) - Refreshes the virtual screen to reflect the relations between panels in the stack
+     *
+     * @deprecated: This is an autogenerated method, and is likely to be renamed, or changed in the near future.
      *
      */
     public function update_panels() {
         return ncurses_update_panels();
     }
 
-    // bool ncurses_use_default_colors (void) - Assign terminal default colors to color id -1
     /**
+     * bool ncurses_use_default_colors (void) - Assign terminal default colors to color id -1
+     *
+     * @deprecated: This is an autogenerated method, and is likely to be renamed, or changed in the near future.
      * @return bool
      */
     public function use_default_colors() {
         return ncurses_use_default_colors();
     }
 
-    // void ncurses_use_env (bool $flag) - Control use of environment information about terminal size
     /**
+     * void ncurses_use_env (bool $flag) - Control use of environment information about terminal size
+     *
+     * @deprecated: This is an autogenerated method, and is likely to be renamed, or changed in the near future.
+     *
      * @param $flag
      */
     public function use_env($flag) {
         return ncurses_use_env($flag);
     }
 
-    // int ncurses_use_extended_names (bool $flag) - Control use of extended names in terminfo descriptions
     /**
+     * int ncurses_use_extended_names (bool $flag) - Control use of extended names in terminfo descriptions
+     *
+     * @deprecated: This is an autogenerated method, and is likely to be renamed, or changed in the near future.
+     *
      * @param $flag
      *
      * @return int
@@ -1495,8 +1809,11 @@ class uncurses {
         return ncurses_use_extended_names($flag);
     }
 
-    // int ncurses_vidattr (int $intarg) - Display the string on the terminal in the video attribute mode
     /**
+     * int ncurses_vidattr (int $intarg) - Display the string on the terminal in the video attribute mode
+     *
+     * @deprecated: This is an autogenerated method, and is likely to be renamed, or changed in the near future.
+     *
      * @param $intarg
      *
      * @return int
@@ -1505,8 +1822,9 @@ class uncurses {
         return ncurses_vidattr($intarg);
     }
 
-    // int ncurses_vline (int $charattr , int $n) - Draw a vertical line at current position using an attributed character and max. n characters long
     /**
+     * int ncurses_vline (int $charattr , int $n) - Draw a vertical line at current position using an attributed character and max. n characters long
+     *
      * @param $charattr
      * @param $n
      *
@@ -1514,217 +1832,6 @@ class uncurses {
      */
     public function vline($charattr, $n) {
         return ncurses_vline($charattr, $n);
-    }
-
-    // int ncurses_waddch (resource $window , int $ch) - Adds character at current position in a window and advance cursor
-    /**
-     * @param $window
-     * @param $ch
-     *
-     * @return int
-     */
-    public function waddch($window, $ch) {
-        return ncurses_waddch($window, $ch);
-    }
-
-    // int ncurses_waddstr (resource $window , string $str [, int $n ]) - Outputs text at current postion in window
-    /**
-     * @param $window
-     * @param $str
-     * @param $n
-     *
-     * @return int
-     */
-    public function waddstr($window, $str, $n = -1) {
-        return ncurses_waddstr($window, $str, $n);
-    }
-
-    // int ncurses_wattroff (resource $window , int $attrs) - Turns off attributes for a window
-    /**
-     * @param $window
-     * @param $attrs
-     *
-     * @return int
-     */
-    public function wattroff($window, $attrs) {
-        return ncurses_wattroff($window, $attrs);
-    }
-
-    // int ncurses_wattron (resource $window , int $attrs) - Turns on attributes for a window
-    /**
-     * @param $window
-     * @param $attrs
-     *
-     * @return int
-     */
-    public function wattron($window, $attrs) {
-        return ncurses_wattron($window, $attrs);
-    }
-
-    // int ncurses_wattrset (resource $window , int $attrs) - Set the attributes for a window
-    /**
-     * @param $window
-     * @param $attrs
-     *
-     * @return int
-     */
-    public function wattrset($window, $attrs) {
-        return ncurses_wattrset($window, $attrs);
-    }
-
-    // int ncurses_wborder (resource $window , int $left , int $right , int $top , int $bottom , int $tl_corner , int $tr_corner , int $bl_corner , int $br_corner) - Draws a border around the window using attributed characters
-    /**
-     * @param $window
-     * @param $left
-     * @param $right
-     * @param $top
-     * @param $bottom
-     * @param $tl_corner
-     * @param $tr_corner
-     * @param $bl_corner
-     * @param $br_corner
-     *
-     * @return int
-     */
-    public function wborder($window, $left, $right, $top, $bottom, $tl_corner, $tr_corner, $bl_corner, $br_corner) {
-        return ncurses_wborder($window, $left, $right, $top, $bottom, $tl_corner, $tr_corner, $bl_corner, $br_corner);
-    }
-
-    // int ncurses_wclear (resource $window) - Clears window
-    /**
-     * @param $window
-     *
-     * @return int
-     */
-    public function wclear($window) {
-        return ncurses_wclear($window);
-    }
-
-    // int ncurses_wcolor_set (resource $window , int $color_pair) - Sets windows color pairings
-    /**
-     * @param $window
-     * @param $color_pair
-     *
-     * @return int
-     */
-    public function wcolor_set($window, $color_pair) {
-        return ncurses_wcolor_set($window, $color_pair);
-    }
-
-    // int ncurses_werase (resource $window) - Erase window contents
-    /**
-     * @param $window
-     *
-     * @return int
-     */
-    public function werase($window) {
-        return ncurses_werase($window);
-    }
-
-    // int ncurses_wgetch (resource $window) - Reads a character from keyboard (window)
-    /**
-     * @param $window
-     *
-     * @return int
-     */
-    public function wgetch($window) {
-        return ncurses_wgetch($window);
-    }
-
-    // int ncurses_whline (resource $window , int $charattr , int $n) - Draws a horizontal line in a window at current position using an attributed character and max. n characters long
-    /**
-     * @param $window
-     * @param $charattr
-     * @param $n
-     *
-     * @return int
-     */
-    public function whline($window, $charattr, $n) {
-        return ncurses_whline($window, $charattr, $n);
-    }
-
-    // bool ncurses_wmouse_trafo (resource $window , int &$y , int &$x , bool $toscreen) - Transforms window/stdscr coordinates
-    // DD See notes on uncurses::mouse_trafo()
-    /**
-     * @param $window
-     * @param $y
-     * @param $x
-     * @param $toscreen
-     *
-     * @return array
-     */
-    public function wmouse_trafo($window, $y, $x, $toscreen) {
-        $return_value = ncurses_wmouse_trafo($window, $y, $x, $toscreen);
-
-        return array(
-            'return' => $return_value,
-            'y'      => $y,
-            'x'      => $x,
-        );
-    }
-
-    // int ncurses_wmove (resource $window , int $y , int $x) - Moves windows output position
-    /**
-     * @param $window
-     * @param $y
-     * @param $x
-     *
-     * @return int
-     */
-    public function wmove($window, $y, $x) {
-        return ncurses_wmove($window, $y, $x);
-    }
-
-    // int ncurses_wnoutrefresh (resource $window) - Copies window to virtual screen
-    /**
-     * @param $window
-     *
-     * @return int
-     */
-    public function wnoutrefresh($window) {
-        return ncurses_wnoutrefresh($window);
-    }
-
-    // int ncurses_wrefresh (resource $window) - Refresh window on terminal screen
-    /**
-     * @param $window
-     *
-     * @return int
-     */
-    public function wrefresh($window) {
-        return ncurses_wrefresh($window);
-    }
-
-    // int ncurses_wstandend (resource $window) - End standout mode for a window
-    /**
-     * @param $window
-     *
-     * @return int
-     */
-    public function wstandend($window) {
-        return ncurses_wstandend($window);
-    }
-
-    // int ncurses_wstandout (resource $window) - Enter standout mode for a window
-    /**
-     * @param $window
-     *
-     * @return int
-     */
-    public function wstandout($window) {
-        return ncurses_wstandout($window);
-    }
-
-    // int ncurses_wvline (resource $window , int $charattr , int $n) - Draws a vertical line in a window at current position using an attributed character and max. n characters long
-    /**
-     * @param $window
-     * @param $charattr
-     * @param $n
-     *
-     * @return int
-     */
-    public function wvline($window, $charattr, $n) {
-        return ncurses_wvline($window, $charattr, $n);
     }
 }
 
