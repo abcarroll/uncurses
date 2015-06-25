@@ -1,5 +1,5 @@
-Copyright (c) 2013, Armond B. Carroll III, ben@hl9.net
-This file is a part of the Uncurses library.
+Copyright (c) 2013-2015, Armond B. Carroll III, ben@hl9.net
+http://github.com/abcarroll/uncurses
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted provided that the following conditions are met:
