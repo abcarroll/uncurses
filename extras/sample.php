@@ -1,7 +1,7 @@
 <?php
 
-require 'Uncurses.php';
-require 'Window.php';
+require '../src/Uncurses.php';
+require '../src/Window.php';
 
 $curses = new \Uncurses\Uncurses([
     'echo'          => false,

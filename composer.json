@@ -18,5 +18,10 @@
   "require": {
     "php": ">=5.5.0",
     "ext-ncurses": "*"
+  },
+  "autoload": {
+    "psr-4": {
+      "Uncurses\\": "src/"
+    }
   }
 }
