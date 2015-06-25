@@ -1,48 +1,47 @@
-# uncurses #
-Uncurses (un - curses) is the __U__sable __n__curses library.  It is the ncurses extension for PHP, wrapped in a PHP class, with an attempt to make the interface easier to use and a little more sane.
+# Uncurses (un - curses)
+## The **U**sable **n**urses library. 
 
-The main code is wrapped in the `uncurses` class.  Changes include:
+If you've ever used the ncurses PHP extension, you know how frustrating it is.  Uncurses makes ncurses a viable option for php-cli.  It is the ncurses extension for PHP, wrapped in a PHP class, with an attempt to make the interface easier to use and a little more sane.
 
- * Object oriented interface
- * No pass-by-reference.
- * Subjectively better function (method) names.
- * Return values that make sense.  Many of the ncurses C functions return for example 1 on failure, which were passed on to PHP's wrapper extension.
- * Combined many-methods-in-one.  For example, instead of two separate functions `ncurses_mvaddstr()` and `ncurses_addstr()`, with one moving to the Y, X given, and the other not, I reduced this into single methods, like `ncurses_addstr($text, [$y, [$x]])`.  If you specify the `$y, $x`, you get expected result of moving the cursor.  If you do not, you get the expected result of not moving the cursor.
- * Removal of redundant functions.  Some ncurses functions really didn't make sense in the context of PHP, such as the 'n' functions, which output text to the specified length.  If you wanted to do this, you probably would have used PHP's `substr()` instead to begin with.
-
-## To Do ##
- * Windows and panels wrapped in their own respective objects/classes **In Progress**
- * Make sure all functions return consistent return values **In progress**
- * More logic code to make common tasks easier
- * Find out why x, y is typically reversed as y, x and if for none other than an arbitrary reason, reverse them back to the normal convention of x, y. - *According to one IRC user, it's because ansi sequences use row, column which would correlate to y,x.  Therefore, it should be perfectly fine to change them all to x, y.*
- * Break down code into multiple small classes.  For example, a window class, a text class, and so-on.
+ * New users, as well as prior uses of ncurses (php or C) will feel at home.
+ * Easy to create and manipulate command-line GUI's in signifiantly less code.
+ * Object oriented interface.  Windows and panels represented by objects.
+ * No pass-by-reference to functions (methods).
+ * Subjectively better function (method) names over php-ncurses.
+ * Consistent return values and method parameters that make sense.
+ * Entire code base documented via phpdoc.
+ * Removed functions that aren't necessary in the context of PHP.
+ * Combined many C-wrapped functions into single PHP methods.  
 
 ## Heavy Development ##
-Both the PHP extension and Uncurses are currently experimental.  It's my goal that Uncurses will become a __consistent__ interface, meaning that even if the underlying PHP extension drastically changes, the Uncurses API will stay the same.  However, I am still working on producing the first "release", so until then, expect drastic changes, including arbitrary method name changes.
+Uncurses is under very heavy development.  Some parts of the API can be considered finalized and usable.  However, a large portion of the code was auto-generated from ncurses documentation and only exist as pass-through calls to the `ncurses_*` functions.  These functions should be marked in phpdoc as deprecated and will be removed.
 
-## Short Documentation ##
+It's my goal that Uncurses will become a __consistent__ interface, meaning that even if the underlying PHP extension drastically changes, the Uncurses API will stay the same.  However, I am still working on producing the first "release", so until then, expect drastic changes, including arbitrary method name and prototype changes, complete removal, and additions.
 
-### Return values ###
-Return values have been made consistent.  In the ncurses extension, return values were pretty wild, with on the majority of functions, -1 indicating error, 0 indicating success, and false seems to indicate explicitly that `ncurses_init()` hadn't been called.
+## To Do ##
+ * Finish converting all pass-through functions to stable Uncurses methods.  
+ * Write a highly functional example.
+ * Windows and panels wrapped in their own respective objects/classes **In Progress**
+ * Make sure all functions return consistent return values **In progress**
+ * More logic code to make common tasks easier: Creating panels, capturing input, possibly a more DOM-like interface: i.e, create a textbox, checkbox, etc.
+ * Find out why x, y is typically reversed as y, x and if for none other than an arbitrary reason, reverse them back to the normal convention of x, y. - *According to one IRC user, it's because ansi sequences use row, column which would correlate to y,x.  Therefore, it should be perfectly fine to change them all to x, y.*
 
-In uncurses, we're above all that mess.  Return values are simple:
- * Some functions __do__ return an array.  The success/failure return code is always in element `[0]`, which is always the first element of the array.  If there is other data returned, such as `y`, `x` values, they will be in elements named `y`, and `x`, respectively.
- * In element `[0]`, or the usual return value is either __the value it needs to return__ (in the case of, for example, `ncurses::getmaxy()`), or ``true``/``false``.  You can use the `===` operator to check for an error status in those functions that also return an integer, for example:
-```
-if($uncurses->getmaxy() === false) { 
-  die("Can't continue");
- }
- ```
- 
-### Removed ncurses_* Interfaces ###
-* `ncurses_addchnstr()` - Add attributed string with specified length at current position - Redundant.  Use `uncurses::addchstr()` instead, if you need to specify a max length, use substr()
-* `ncurses_addnstr()` - Add string with specified length at current position - Redundant.  Use `ncurses::ncurses_addstr()` instead, if you need to specify a max length, use substr()
-* `ncurses_echochar()` - Single character output including refresh - Redundant.  Use `ncurses::addch()` followed by a `ncurses::refresh()` instead.
-* `ncurses_mvaddch()` - Move current position and add character - Redundant.  `ncurses::addch()` optionally accepts a 3rd/4th parameter `$y, $x`.  If specified, it moves it for you.
-* `ncurses_mvaddchnstr()` - Redundant. Has combined redundancy of `ncurses_addchnstr()` and `ncurses_mvaddch()`.
-* `ncurses_mvaddchstr()`, - Combined as in `ncurses_mvaddch`.
-* `ncurses_mvaddnstr()` - Use the three-paramter version of addstr() with substr() if you want this functionality.
-* `mvaddstr()` - Combined to three paramter method as others.
+## Improvements
+Aside from the obvious object orientation, if you are a previous user of php-ncurses or the ncurses C library, you will find a a few differences:
+
+ * As mentioned previously, return values are more PHP-like.  Most functions return ``true`` or ``false``, while php-ncurses confusingly returns an integer zero for success, and non-zero for failure.  (This makes more sense in the C library, but not in PHP).
+
+ * Many php-ncurses functions are folded into single methods to reduce footprint, documentation, and frustration.  For example, instead of two separate functions `ncurses_mvaddstr()` and `ncurses_addstr()`, with one moving to the Y, X given, and the other not, I reduced this into single methods, like `$object->addstr($text, [$y, [$x]])`.  If you specify the `$y, $x`, you get expected result of moving the cursor.  If you do not, you get the expected result of not moving the cursor.
+
+ * In php-ncurses, for a large part there are two identical-acting functions for every operation: one for a specific window, one for the root window (and then, sometimes a third for panels).  For example, previously if you wanted to refresh the whole screen, you called ``ncurses_refresh()``, and if you wanted to refresh a specific window, you would call ``ncurses_wrefresh($window)``.  Objects simplify this drastically: To refresh the screen, you would call ``Uncurses::refresh()``, and to refresh a specific window, you would call ``$window->refresh()``.
+
+ * Removal of redundant functions.  Some ncurses functions really didn't make sense in the context of PHP, such as the 'n' functions, which output text to the specified length.  If you wanted to do this, you probably would have used PHP's `substr()` instead to begin with.
+
+ * Return values are more in-line with what you expect in PHP.  If you use the ncurses C library, it makes more sense in that context as there are supporting constants.  However, when translated to PHP, we end up with oddities such as -1 for errors, and 0 for success.   Uncurses typically returns boolean `true` and `false` where obvious, and arrays for "getters".  See the phpdoc for individual functions.
+
+## Getting started ##
+
+This section needs to be expanded.  See ``extras/sample.php`` for a working example.
 
 ## License ##
 uncurses is licensed under a BSD-like license.
@@ -50,5 +49,49 @@ uncurses is licensed under a BSD-like license.
 uncurses includes textual descriptions and prototype names, many verbatim
 from the PHP Manual, which are (c) The PHP Documentation Group, and covered
 under the Creative Commons Attribution 3.0 License.  The author claims no
+ownership of such material, and als# Uncurses (un - curses)
+## The **U**sable **n**urses library. 
+
+If you've ever used the ncurses PHP extension, you know how frustrating it is.  Uncurses makes ncurses a viable option for php-cli.  It is the ncurses extension for PHP, wrapped in a PHP class, with an attempt to make the interface easier to use and a little more sane.
+
+ * New users, as well as prior uses of ncurses (php or C) will feel at home.
+ * Easy to create and manipulate command-line GUI's in signifiantly less code.
+ * Object oriented interface.  Windows and panels represented by objects.
+ * No pass-by-reference to functions (methods).
+ * Subjectively better function (method) names over php-ncurses.
+ * Consistent return values and method parameters that make sense.
+ * Entire code base documented via phpdoc.
+ * Removed functions that aren't necessary in the context of PHP.
+ * Combined many C-wrapped functions into single PHP methods.  
+
+## Heavy Development ##
+Uncurses is under  heavy development.  Many parts of the API is usable and stable.  However, a large portion of the code was auto-generated from ncurses documentation, and only exist as pass-through `ncurses_*` functions.  These functions are marked as deprecated via phpdoc.  
+
+It's my goal that Uncurses will become a __consistent__ interface.  If the underlying PHP extension changes, the Uncurses API will stay the same. However, I am still working on producing the first usable copy of Uncurses.  Until "that" point, expect drastic, code-breaking changes.
+
+## Improvements
+Aside from the obvious object orientation, if you are a previous user either php-ncurses or the ncurses C library, you will find a a few differences:
+
+ * As mentioned before, return values are more PHP-like.  Most functions return ``true`` or ``false``, while php-ncurses confusingly returns an integer zero for success, and non-zero for failure.  (This makes more sense in the C library, but not in PHP).
+
+ * Uncurses folds many php-ncurses functions into single methods to reduce footprint, documentation, and frustration.  For example, instead of two separate functions `ncurses_mvaddstr()` and `ncurses_addstr()`, with one moving to the Y, X given, and the other not, I reduced this into single methods, like `$object->addstr($text, [$y, [$x]])`.  If you specify the `$y, $x`, you get expected result of moving the cursor.  If you do not, you get the expected result of not moving the cursor.
+
+ * In php-ncurses, for a large part there are two identical-acting functions for every operation: one for a specific window, one for the root window (and then, sometimes a third for panels).  For example, previously if you wanted to refresh the whole screen, you called ``ncurses_refresh()``, and if you wanted to refresh a specific window, you would call ``ncurses_wrefresh($window)``.  Objects simplify this drastically: To refresh the screen, you would call ``Uncurses::refresh()``, and to refresh a specific window, you would call ``$window->refresh()``.
+
+ * Removal of redundant functions.  Some ncurses functions really didn't make sense in the context of PHP, such as the 'n' functions, which output text to the specified length.  If you wanted to do this, you probably would have used PHP's `substr()` instead to begin with.
+
+ * Return values are more in-line with what you expect in PHP.  If you use the ncurses C library, it makes more sense in that context as there are supporting constants.  However, when translated to PHP, we end up with oddities such as -1 for errors, and 0 for success.   Uncurses typically returns boolean `true` and `false` where obvious, and arrays for "getters".  See the phpdoc for individual functions.
+
+## Getting started ##
+
+This section needs to be expanded.  See ``extras/sample.php`` for a working example.
+
+## License ##
+Uncurses is licensed under a BSD-like license.
+
+Uncurses includes textual descriptions and prototype names, many verbatim
+from the PHP Manual, which are (c) The PHP Documentation Group, and covered
+under the Creative Commons Attribution 3.0 License.  The author claims no
 ownership of such material, and also extends a huge thanks the PHP
+Documentation Group for their work.o extends a huge thanks the PHP
 Documentation Group for their work.
