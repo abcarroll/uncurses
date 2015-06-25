@@ -1,6 +1,6 @@
 <?php
 
-require 'uncurses.php';
+require 'Uncurses.php';
 require 'Window.php';
 
 $curses = new \Uncurses\Uncurses([
