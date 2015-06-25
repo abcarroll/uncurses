@@ -1,0 +1,22 @@
+{
+  "name": "abcarroll/uncurses",
+  "type": "library",
+  "description": "Uncurses is the Usable ncurses library",
+  "keywords": [
+    "ncurses",
+    "php-cli"
+  ],
+  "homepage": "http://github.com/abcarroll/uncurses",
+  "license": "BSD",
+  "authors": [
+    {
+      "name": "A.B. Carroll",
+      "email": "ben@hl9.net",
+      "homepage": "https://github.com/abcarroll"
+    }
+  ],
+  "require": {
+    "php": ">=5.5.0",
+    "ext-ncurses": "*"
+  }
+}
