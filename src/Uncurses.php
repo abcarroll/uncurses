@@ -49,7 +49,7 @@ class Uncurses {
 
     /*
      * Default options for the Uncurses object. These are all inopts, see man 3CURSES inopts for more in-depth information regarding them.  This is done
-     * particularly because cbreak, keypad, and ... options are inhereited from the tty, so this is an attempt to keep the behavior of Uncurses applications
+     * particularly because cbreak, keypad, and ... options are inherited from the tty, so this is an attempt to keep the behavior of Uncurses applications
      * consistent across different tty's and platforms.
      */
     private $options = [], $defaultOptions = [
@@ -62,7 +62,7 @@ class Uncurses {
      * This is to be used by program authors to print a prettier error message, and perhaps installation instructions, if the user is lacking the necessary
      * extensions to use Uncurses, namely the PHP ncurses extension.
      *
-     * @return bool True if the user has the necessary extensions and is able to run Uncurses, false if not.
+     * @return bool true if the user has the necessary extensions and is able to run Uncurses, false if not.
      */
     public static function hasExtension() {
         if(function_exists('ncurses_init')) {

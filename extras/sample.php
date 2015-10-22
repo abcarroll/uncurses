@@ -10,7 +10,7 @@ $curses = new \Uncurses\Uncurses([
 ]);
 
 $rootWindow = $curses->newWindow(100, 100, 0, 0);
-$rootWindow->addStr("Hello world!"); // this doesn't work for some stupi dreason
+$rootWindow->addStr("Hello world!"); // this doesn't work for some stupid reason
 ncurses_mvwaddstr($rootWindow->getWindowResource(), 0, 1, "Hello World"); // neither does this
 
 $rootWindow->refresh();

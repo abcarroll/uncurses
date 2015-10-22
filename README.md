@@ -1,5 +1,5 @@
 # Uncurses (un - curses)
-## The **U**sable **n**urses library.
+## The **U**sable **n**curses library.
 
 If you've ever used the ncurses PHP extension, you know how frustrating it is.  Uncurses makes ncurses a viable option for php-cli.  It is the ncurses
 extension for PHP, wrapped in a PHP class, with an attempt to make the interface easier to use and a little more sane.
