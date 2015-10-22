@@ -12,7 +12,7 @@ extension for PHP, wrapped in a PHP class, with an attempt to make the interface
  * Consistent return values and method parameters that make sense.
  * Entire code base documented via phpdoc.
  * Removed functions that aren't necessary in the context of PHP.
- * Combined many C-wrapped functions into single PHP methods.
+ * Combined many C-wrapped functions into single Uncurses methods.
 
 ## Heavy Development ##
 Uncurses is under very heavy development.  Some parts of the API can be considered finalized and usable.  However, a large portion of the code was
@@ -37,7 +37,8 @@ prototype changes, complete removal, and additions.
 Aside from the obvious object orientation, if you are a previous user of php-ncurses or the ncurses C library, you will find a a few differences:
 
  * As mentioned previously, return values are more PHP-like.  Most functions return ``true`` or ``false``, while php-ncurses confusingly returns an integer
- zero for success, and non-zero for failure.  (This makes more sense in the C library, but not in PHP).
+ zero for success, and non-zero for failure.  (Note: php-ncurses did this to be a 1-to-1 wrapper for the C library, and it does make sense in the C library, but
+ not so much in php-ncurses, or PHP itself).
 
  * Many php-ncurses functions are folded into single methods to reduce footprint, documentation, and frustration.  For example, instead of two separate
  unctions `ncurses_mvaddstr()` and `ncurses_addstr()`, with one moving to the Y, X given, and the other not, I reduced this into single methods, like
@@ -50,7 +51,8 @@ Aside from the obvious object orientation, if you are a previous user of php-ncu
  ``Uncurses::refresh()``, and to refresh a specific window, you would call ``$window->refresh()``.
 
  * Removal of redundant functions.  Some ncurses functions really didn't make sense in the context of PHP, such as the 'n' functions, which output text to the
- specified length.  If you wanted to do this, you probably would have used PHP's `substr()` instead to begin with.
+ specified length.  It is much more natural to use PHP's `substr()` instead.  Once again, these removed functions made sense in the context of the C library,
+ but make less sense in PHP (thus their removal).
 
  * Return values are more in-line with what you expect in PHP.  If you use the ncurses C library, it makes more sense in that context as there are supporting
  constants.  However, when translated to PHP, we end up with oddities such as -1 for errors, and 0 for success.   Uncurses typically returns boolean `true` and
@@ -66,4 +68,5 @@ uncurses is licensed under a BSD-like license.
 uncurses includes textual descriptions and prototype names, many verbatim
 from the PHP Manual, which are (c) The PHP Documentation Group, and covered
 under the Creative Commons Attribution 3.0 License.  The author claims no
-ownership of such material, and als# Uncurses (un - curses)
+ownership of such material, and also extends a huge thanks the PHP
+Documentation Group for their work.
